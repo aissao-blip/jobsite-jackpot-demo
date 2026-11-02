@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobsite Jackpot. Cash Out</title>
+  <link rel="stylesheet" href="/static/css/payout_board.css">
+  <style>
+    @keyframes bounce {
+      from { transform: translateY(0);    }
+      to   { transform: translateY(-12px); }
+    }
+    .pb-co-wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 16px 64px;
+    }
+    .pb-co-card {
+      background: var(--pb-card);
+      border: 1px solid var(--pb-border);
+      border-radius: 8px;
+      padding: 32px;
+    }
+    .pb-label {
+      display: block;
+      font-family: var(--pb-font);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--pb-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .pb-input {
+      width: 100%;
+      background: var(--pb-bg-dark);
+      border: 1px solid var(--pb-border-hi);
+      border-radius: 4px;
+      color: var(--pb-white);
+      font-size: 14px;
+      padding: 10px 12px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .pb-input:focus { outline: none; border-color: var(--pb-green); }
+    .pb-input.error { border-color: #ff5252; }
+    .pb-input::placeholder { color: var(--pb-muted); }
+    .pb-field-group { margin-bottom: 18px; }
+    .pb-field-error { color: #ff5252; font-size: 12px; margin-top: 4px; }
+    .pb-error-banner {
+      background: rgba(229,57,53,0.1);
+      border: 1px solid rgba(229,57,53,0.4);
+      border-radius: 4px;
+      color: #ff8a80;
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+    }
+    .pb-file-input {
+      display: block;
+      width: 100%;
+      font-size: 13px;
+      color: var(--pb-muted);
+      cursor: pointer;
+      padding: 8px 0;
+    }
+    .pb-file-input::file-selector-button {
+      background: var(--pb-border);
+      color: var(--pb-white);
+      border: 1px solid var(--pb-border-hi);
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: var(--pb-font);
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .pb-submit-btn {
+      width: 100%;
+      background: var(--pb-green);
+      color: #000;
+      font-family: var(--pb-font);
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      padding: 16px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .pb-submit-btn:hover { background: #6BB300; transform: translateY(-1px); }
+    .pb-submit-btn:active { transform: translateY(0); }
+
+    /* Status cards */
+    .pb-status-card {
+      background: var(--pb-card);
+      border: 1px solid var(--pb-border);
+      border-radius: 8px;
+      padding: 32px;
+    }
+    .pb-status-header {
+      font-family: var(--pb-font);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--pb-muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .pb-eligible-alias {
+      font-family: var(--pb-font);
+      font-size: 20px;
+      font-weight: 900;
+      color: #E8C547;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .pb-eligible-tier-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .pb-tier-tag {
+      display: inline-block;
+      background: var(--pb-green);
+      color: #000;
+      font-family: var(--pb-font);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 3px;
+    }
+    .pb-tier-tag.top-earner {
+      background: #E8C547;
+    }
+    .pb-prize-big {
+      font-family: var(--pb-font);
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--pb-green);
+      letter-spacing: 1px;
+    }
+    .pb-prize-big.top-earner { color: #E8C547; }
+    .pb-spots-note { font-size: 13px; color: var(--pb-muted); margin-bottom: 20px; }
+    .pb-confirm-divider { border: none; border-top: 1px solid var(--pb-border); margin: 24px 0; }
+    .pb-confirm-label {
+      font-family: var(--pb-font);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--pb-green);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .pb-warning-note { font-size: 12px; color: #ff8a80; margin-bottom: 16px; line-height: 1.5; }
+
+    /* Confirmed */
+    .pb-cashout-confirmed {
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .pb-cashout-confirmed-icon { font-size: 56px; display: block; margin-bottom: 16px; }
+    .pb-cashout-confirmed-title {
+      font-family: var(--pb-font);
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #E8C547;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .pb-cashout-confirmed-sub { font-size: 14px; color: var(--pb-muted); margin-bottom: 28px; line-height: 1.5; }
+    .pb-cashout-prize-reveal {
+      display: inline-block;
+      background: rgba(232,197,71,0.08);
+      border: 2px solid #E8C547;
+      border-radius: 6px;
+      padding: 16px 32px;
+      margin-bottom: 28px;
+    }
+    .pb-cashout-prize-label {
+      font-size: 11px;
+      font-family: var(--pb-font);
+      letter-spacing: 2px;
+      color: var(--pb-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .pb-cashout-prize-amount {
+      font-family: var(--pb-font);
+      font-size: 42px;
+      font-weight: 900;
+      color: #E8C547;
+    }
+    .pb-cashout-prize-tier {
+      font-family: var(--pb-font);
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--pb-muted);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .pb-next-steps {
+      background: rgba(91,156,0,0.05);
+      border: 1px solid var(--pb-border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      text-align: left;
+      margin-bottom: 28px;
+      font-size: 13px;
+      color: var(--pb-muted);
+      line-height: 1.6;
+    }
+    .pb-next-steps strong { color: var(--pb-green); }
+
+    /* Info states */
+    .pb-info-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+    .pb-info-title {
+      font-family: var(--pb-font);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: var(--pb-white);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .pb-info-body { font-size: 14px; color: var(--pb-muted); line-height: 1.6; margin-bottom: 20px; }
+    .pb-info-body strong { color: var(--pb-white); }
+
+    @media (max-width: 480px) {
+      .pb-co-card, .pb-status-card { padding: 20px 16px; }
+      .pb-cashout-confirmed { padding: 28px 12px; }
+      .pb-prize-big { font-size: 28px; }
+    }
+    @media (max-width: 560px) {
+      .pb-decision-grid { grid-template-columns: 1fr !important; }
+    }
+
+    /* ── Mower game pane ────────────────────────────────── */
+    .pb-mower-pane {
+      background: #0a0e1a;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 20px;
+      display: none; /* shown by JS */
+    }
+    /* D-pad grid */
+    .pb-mower-dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 52px);
+      grid-template-rows: repeat(3, 52px);
+      gap: 6px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .pb-mower-btn {
+      background: #1e293b;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      touch-action: none;
+      transition: background 0.1s;
+    }
+    .pb-mower-btn:hover   { background: #2d3f55; }
+    .pb-mower-btn.pressed { background: #9fe822; color: #000; }
+    .pb-mower-btn.empty   { background: transparent; border-color: transparent; pointer-events: none; }
+    /* Result pane */
+    .pb-mower-result {
+      display: none;
+      padding: 24px 0 8px;
+      text-align: center;
+    }
+    .pb-mower-result-icon  { font-size: 48px; display: block; margin-bottom: 12px; }
+    .pb-mower-result-title {
+      font-family: var(--pb-arcade-font);
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .pb-mower-result-title.win  { color: #9fe822; }
+    .pb-mower-result-title.loss { color: #f43f5e; }
+    .pb-mower-result-body {
+      font-size: 13px;
+      color: #8BA3B8;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body class="pb-body">
+
+<!-- Compact header -->
+<div style="padding: 20px 16px 0;">
+  <div style="text-align:center; margin-bottom: 20px;">
+    <div style="display:inline-flex; align-items:center; gap:10px;">
+      <div class="pb-live-indicator">
+        <div class="pb-live-dot"></div>
+        <span class="pb-live-label">LIVE</span>
+      </div>
+      <div>
+        <div style="font-family:var(--pb-font);font-size:11px;letter-spacing:2px;color:var(--pb-muted);text-transform:uppercase;">TOOLFORGE PRESENTS</div>
+        <div style="font-family:var(--pb-font);font-size:20px;font-weight:900;letter-spacing:3px;color:var(--pb-white);text-transform:uppercase;line-height:1;">JOBSITE JACKPOT</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pb-co-wrap">
+
+  {% if confirmed %}
+  <!-- CONFIRMED: CASHED OUT -->
+  <div class="pb-status-card pb-cashout-confirmed">
+    <span class="pb-cashout-confirmed-icon">💰</span>
+    <div class="pb-cashout-confirmed-title">Cashed Out</div>
+    <div class="pb-cashout-confirmed-sub">
+      {{ alias }}. Your cash out request has been received. Admin will verify and approve shortly.
+    </div>
+    <div class="pb-cashout-prize-reveal">
+      <div class="pb-cashout-prize-label">Locked In Prize</div>
+      <div class="pb-cashout-prize-amount">${{ prize }}</div>
+      <div class="pb-cashout-prize-tier">{{ tier_name }}</div>
+    </div>
+    <div class="pb-next-steps">
+      <strong>What happens next:</strong>
+      <ol style="margin:10px 0 0 0;padding-left:20px;line-height:2;">
+        <li>Admin reviews your screenshot and confirms your view count</li>
+        <li>Once approved (1–2 business days), your alias appears in <strong>Confirmed Payouts</strong> on the live board</li>
+        <li>Your prize is paid out via <strong>the payout provider</strong> in the next pay cycle</li>
+        <li>Keep your Player Code safe. You may need it for any follow-up</li>
+      </ol>
+    </div>
+    <a href="/payout-board/live" class="pb-cta-btn" style="display:inline-block;">WATCH THE BOARD</a>
+  </div>
+
+  {% else %}
+
+  {% if errors.general %}
+  <div class="pb-error-banner">{{ errors.general }}</div>
+  {% endif %}
+
+  {% if errors.email and not errors.co_impressions and not errors.co_screenshot %}
+  <!-- Email error. Re-show lookup form -->
+  <div class="pb-co-card">
+    <div class="pb-section-label" style="justify-content:flex-start;margin-bottom:16px;">CASH OUT</div>
+    <div style="font-size:14px;color:var(--pb-muted);margin-bottom:24px;line-height:1.5;">
+      Enter your email to confirm your tier and lock in your payout.
+    </div>
+    <form method="GET" action="/payout-board/cashout">
+      <div class="pb-field-group">
+        <label class="pb-label" for="email_lookup">Your Email</label>
+        <input class="pb-input error" type="email" id="email_lookup" name="email"
+               value="{{ prefill_email }}" autocomplete="email" required>
+        <div class="pb-field-error">{{ errors.email }}</div>
+      </div>
+      <button type="submit" class="pb-submit-btn">CHECK MY STATUS</button>
+    </form>
+    <div style="text-align:center;margin-top:16px;">
+      <a href="/payout-board/submit" style="font-size:12px;color:var(--pb-green);text-decoration:none;font-family:var(--pb-font);font-weight:700;letter-spacing:1px;text-transform:uppercase;">SUBMIT YOUR POST →</a>
+    </div>
+  </div>
+
+  {% elif prefill_email and not errors.email and not errors.general %}
+
+  {% if sub is defined and sub %}
+
+    {% if sub.cashed_out == 'Yes' %}
+    <!-- Already cashed out -->
+    <div class="pb-status-card">
+      <span class="pb-info-icon">✅</span>
+      <div class="pb-info-title">Already Cashed Out</div>
+      <div style="margin-bottom:12px;"><span class="pb-eligible-alias">{{ sub.alias }}</span></div>
+      <div class="pb-info-body">
+        You've already locked in your payout.
+        {% if sub.cash_out_tier %}
+          <strong>{{ sub.cash_out_tier }}</strong>
+          {% set co_tier_num = sub.tier_qualified | int %}
+          {% if co_tier_num > 0 and tier_config.get(co_tier_num) %}, <strong>${{ tier_config[co_tier_num].prize }}</strong>{% endif %}
+        {% endif %}
+        <br>Your prize is being processed via the payout provider.
+      </div>
+      <a href="/payout-board/live" class="pb-cta-btn" style="display:inline-block;">WATCH THE BOARD</a>
+    </div>
+
+    {% else %}
+    {% set qtier = (qualified_tier if qualified_tier is defined else computed_tier) | default(0) | int %}
+    {% set ctier = (cashout_tier if cashout_tier is defined else computed_tier) | default(0) | int %}
+    {% set tier_num = ctier %}
+    {% set tc = tier_config.get(ctier) if ctier > 0 else none %}
+    {% set qtc = tier_config.get(qtier) if qtier > 0 else none %}
+    {% set qtier_name = qualified_tier_name if qualified_tier_name is defined else (qtc.name if qtc else '') %}
+    {% set top_tier = tier_config.keys() | max %}
+
+    {% if qtier == 0 %}
+    <!-- Not qualified -->
+    <div class="pb-status-card">
+      <span class="pb-info-icon">📊</span>
+      <div style="margin-bottom:8px;"><span class="pb-eligible-alias">{{ sub.alias }}</span></div>
+      <div class="pb-info-title">Not There Yet</div>
+      <div class="pb-info-body">
+        You need <strong>{{ [500 - (sub.impressions | int), 0] | max | int }} more views</strong>
+        to hit Entry Level and qualify for a payout. Keep promoting your post.
+      </div>
+      <a href="/payout-board/live" class="pb-cta-btn" style="display:inline-block;">BACK TO THE BOARD</a>
+    </div>
+
+    {% elif ctier == 0 %}
+    <!-- Qualified, but every tier at/below is full right now -> waitlisted -->
+    <div class="pb-status-card">
+      <span class="pb-info-icon">⚡</span>
+      <div style="margin-bottom:8px;"><span class="pb-eligible-alias">{{ sub.alias }}</span></div>
+      <div class="pb-info-title">YOU'RE IN THE QUEUE</div>
+      <div class="pb-info-body">
+        <strong>{{ qtier_name }}</strong> (and every tier below it) is full right now, but you're still in the game.<br><br>
+        {% if waitlist_rank %}You're <strong>#{{ waitlist_rank }}</strong> in line for <strong>{{ qtier_name }}</strong>. {% endif %}
+        <strong>If</strong> a spot frees up (when a player Goes Overtime and releases theirs), it goes to the highest-view creator who entered first. You're also covered by the <strong>Wildcard</strong> at campaign close.
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:4px;">
+        <a href="/payout-board/live" class="pb-cta-btn" style="display:block; text-align:center;">RETURN TO LIVE BOARD</a>
+        <a href="/payout-board/live"
+           style="display:block; text-align:center; padding:14px 24px; border-radius:4px; font-family:var(--pb-font); font-size:12px; font-weight:900; letter-spacing:2px; text-transform:uppercase; text-decoration:none; background:transparent; border:1px solid var(--pb-green); color:var(--pb-green);">
+          SUBMIT UPDATED VIEWS
+        </a>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Eligible: Redesigned Decision Page (renders for the tier they can cash NOW) -->
+    {% set spots_left = tier_stats.get(tier_num, {}).get('remaining', 0) if tier_stats is defined else '?' %}
+    {% set bonus = mower_bonus | default(0) | int %}
+    {% set total_prize = tc.prize + bonus %}
+    <div class="pb-status-card" style="padding:32px;">
+
+      {% if is_step_down %}
+      <!-- ── Step-down notice: qualified tier is full, offering the next open tier down ── -->
+      <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:14px 16px; margin-bottom:20px; font-size:13px; color:#fbbf24; line-height:1.65;">
+        🔁 <strong>{{ qtier_name }}</strong> is full right now. But you can lock in
+        <strong>{{ tc.name }} (${{ tc.prize }})</strong> below.
+        {% if waitlist_rank %}<br>Rather hold out for {{ qtier_name }}? You're <strong>#{{ waitlist_rank }}</strong> in line, <strong>if</strong> a spot frees up, it goes to the highest-view creator who entered first. Don't cash out below if you'd rather wait.{% endif %}
+      </div>
+      {% endif %}
+
+      <!-- ── Progress indicator ── -->
+      <div style="display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:28px; font-size:10px; letter-spacing:1px; text-transform:uppercase; font-weight:700; flex-wrap:wrap; row-gap:8px;">
+        <div style="display:flex; align-items:center; gap:6px; color:#4ade80;">
+          <span style="width:22px; height:22px; border-radius:50%; background:#4ade80; color:#000; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0;">✓</span>
+          <span>Submitted</span>
+        </div>
+        <div style="width:28px; height:2px; background:#9fe822; margin:0 8px; flex-shrink:0;"></div>
+        <div style="display:flex; align-items:center; gap:6px; color:#9fe822;">
+          <span style="width:22px; height:22px; border-radius:50%; border:2px solid #9fe822; color:#9fe822; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; flex-shrink:0;">2</span>
+          <span>Decide</span>
+        </div>
+        <div style="width:28px; height:2px; background:rgba(255,255,255,0.1); margin:0 8px; flex-shrink:0;"></div>
+        <div style="display:flex; align-items:center; gap:6px; color:#334155;">
+          <span style="width:22px; height:22px; border-radius:50%; border:2px solid rgba(255,255,255,0.1); color:#334155; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; flex-shrink:0;">3</span>
+          <span>Paid</span>
+        </div>
+      </div>
+
+      <!-- ── Header: alias + state badge ── -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:10px; letter-spacing:3px; color:#64748b; text-transform:uppercase; margin-bottom:8px;">YOUR GAME PROFILE</div>
+          <h1 style="font-size:32px; font-weight:900; color:#fff; margin:0 0 8px; line-height:1.1;">Hey, {{ sub.alias }}!</h1>
+          <div style="font-size:13px; color:#64748b;">Private Security Code: <span style="color:#9fe822; font-family:monospace; font-weight:700; letter-spacing:2px;">{{ sub.plus_code or prefill_email }}</span></div>
+        </div>
+        {% if sub.status == 'Verified' %}
+        <div style="background:#0a1a00; border:1px solid #3a6600; color:#9fe822; border-radius:8px; padding:10px 16px; font-size:10px; font-weight:700; letter-spacing:1px; text-align:center; text-transform:uppercase; line-height:1.6; flex-shrink:0;">
+          STATUS<br>✓ APPROVED
+        </div>
+        {% else %}
+        <div style="background:#0d1320; border:1px solid rgba(255,255,255,0.1); color:#94a3b8; border-radius:8px; padding:10px 16px; font-size:10px; font-weight:700; letter-spacing:1px; text-align:center; text-transform:uppercase; line-height:1.6; flex-shrink:0;">
+          STATUS<br>🟢 IN PLAY
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ── Stats card ── -->
+      <div style="background:#080d1a; border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:20px 24px; margin-bottom:28px;">
+
+        {# Fix 2: show the latest submitted count (co_impressions if updated, else original) #}
+        {% set eff_imp = effective_impressions | default(0) | int %}
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px;">
+          <span style="color:#94a3b8;">Current Views:</span>
+          <span style="color:#f1f5f9; font-weight:600;">{{ '{:,}'.format(eff_imp) }} views</span>
+        </div>
+
+        {# Fix 3: Submission history. Show both original and latest when an update exists #}
+        {% set has_update = sub.co_impressions | default(0) | int > 0 %}
+        {% if has_update %}
+        <div style="margin:12px 0 4px; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+          <div style="font-size:10px; letter-spacing:2px; color:#475569; text-transform:uppercase; font-weight:700; margin-bottom:10px;">Submission History</div>
+          <div style="display:grid; grid-template-columns:1fr auto auto; gap:4px 14px; font-size:12px; align-items:center;">
+            <span style="color:#64748b;">Original Submission</span>
+            <span style="color:#94a3b8; text-align:right;">{{ '{:,}'.format(sub.impressions | default(0) | int) }} views</span>
+            <span style="color:#475569; font-size:11px; white-space:nowrap;">{{ sub.sub_date[:10] if sub.sub_date else ',' }}</span>
+
+            <span style="color:#9fe822; font-weight:700;">Latest Update ✓</span>
+            <span style="color:#f1f5f9; font-weight:700; text-align:right;">{{ '{:,}'.format(sub.co_impressions | int) }} views</span>
+            <span style="color:#475569; font-size:11px; white-space:nowrap;">{{ sub.co_date[:10] if sub.co_date else ',' }}</span>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if bonus > 0 %}
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px;">
+          <span style="color:#94a3b8;">🏦 Bonus Bank:</span>
+          <span style="color:#9fe822; font-weight:700;">+${{ bonus }} earned</span>
+        </div>
+        {% endif %}
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px;">
+          <span style="color:#94a3b8;">Tier status:</span>
+          <span style="color:#f59e0b; font-weight:700;">{{ tc.name }}, ${{ tc.prize }}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:14px 0 4px; font-size:18px; font-weight:900;">
+          <span style="color:#f1f5f9;">Qualified Payout:</span>
+          <span style="color:#9fe822;">${{ tc.prize }}{% if bonus > 0 %} + ${{ bonus }} bonus{% endif %}</span>
+        </div>
+      </div>
+
+      <!-- ── Decision cards ── -->
+      <div id="pbDecisionArea">
+        <div class="pb-decision-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+
+          <!-- Decision A: Secure & Cash Out -->
+          <div onclick="pbShowCashoutForm()" style="background:#0d111c; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:24px; cursor:pointer; transition:border-color .2s;"
+               onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+            <div style="font-size:10px; letter-spacing:2px; color:#64748b; text-transform:uppercase; margin-bottom:8px;">DECISION A</div>
+            <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:10px;">SECURE &amp; CASH OUT</div>
+            <div style="font-size:13px; color:#64748b; line-height:1.6; margin-bottom:20px;">Lock in your guaranteed <strong style="color:#fff;">${{ tc.prize }}{% if bonus > 0 %} + ${{ bonus }}{% endif %}</strong> payout. Your spot is secured permanently and you exit the game a winner.</div>
+            <button onclick="pbShowCashoutForm(); event.stopPropagation();"
+                    style="width:100%; padding:14px; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.2); color:#fff; font-weight:700; font-size:13px; letter-spacing:1px; cursor:pointer; text-transform:uppercase; transition:border-color .2s;"
+                    onmouseover="this.style.borderColor='rgba(255,255,255,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.2)'">
+              CASH OUT NOW, ${{ total_prize }}
+            </button>
+          </div>
+
+          <!-- Decision B: Go Overtime. Only when there's a HIGHER tier to climb to.
+               A top-tier creator has nowhere higher to go, so Overtime/mini-game don't apply. -->
+          {% if qtier >= top_tier %}
+          <div style="background:#0d111c; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:24px;">
+            <div style="font-size:10px; letter-spacing:2px; color:#64748b; text-transform:uppercase; margin-bottom:8px;">DECISION B</div>
+            <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:10px;">🏆 You're at the Top</div>
+            <div style="font-size:13px; color:#64748b; line-height:1.7;">
+              <strong style="color:#fff;">{{ qtier_name }}</strong> is the highest tier. There's nothing higher to climb to, so Overtime and the mini-game don't apply to you.
+              {% if is_step_down %}<br><br>Lock in <strong style="color:#9fe822;">{{ tc.name }} (${{ tc.prize }})</strong> now, or {% else %}<br><br>{% endif %}hold your place{% if waitlist_rank %}. You're <strong style="color:#9fe822;">#{{ waitlist_rank }}</strong> in line{% endif %}. If a {{ qtier_name }} spot frees up, it's yours first.
+            </div>
+          </div>
+          {% elif sub.has_played_minigame and sub.status == 'Overtime' %}
+          <!-- Mini-game already played this overtime session. Only Cash Out available -->
+          <div style="background:#0a1a08; border:1px solid rgba(159,232,34,0.2); border-radius:14px; padding:24px; opacity:0.75;">
+            <div style="font-size:10px; letter-spacing:2px; color:#4a6a4a; text-transform:uppercase; margin-bottom:8px;">DECISION B</div>
+            <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:10px;">GO OVERTIME ⚡</div>
+            <div style="font-size:13px; color:#64748b; line-height:1.6; margin-bottom:20px;">
+              Mini-game played this round.{% if bonus > 0 %} <strong style="color:#9fe822;">+${{ bonus }} bonus secured!</strong>{% endif %}
+              Keep growing your views to unlock the next tier and get another Overtime attempt.
+            </div>
+            <div style="font-size:11px; color:#4a6a4a; text-align:center; padding:10px; border:1px solid rgba(255,255,255,0.05); border-radius:6px;">
+              Return to the Live Board → submit updated views → unlock a higher tier → play again
+            </div>
+          </div>
+          {% else %}
+          <div style="background:#0a1a08; border:2px solid #9fe822; border-radius:14px; padding:24px; cursor:pointer; animation:glow-pulse 2s ease-in-out infinite;"
+               onclick="pbGoOvertime()">
+            <div style="font-size:10px; letter-spacing:2px; color:#4a6a4a; text-transform:uppercase; margin-bottom:8px;">DECISION B</div>
+            <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:10px;">GO OVERTIME! ⚡</div>
+            <div style="font-size:13px; color:#64748b; line-height:1.6; margin-bottom:12px;">
+              Release your <strong style="color:#fff;">{{ tc.name }}</strong> spot back to the pool and play the <strong style="color:#9fe822;">Perfect Stripes</strong> mini-game for a chance at a <strong style="color:#9fe822;">+$100 permanent bonus</strong>.
+            </div>
+            <!-- What's the risk + what's the safety net -->
+            <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:#64748b; line-height:1.8;">
+              <div style="margin-bottom:4px;"><span style="color:#f59e0b;">⚠ The risk:</span> Your spot is released. Another creator can take it.</div>
+              <div style="margin-bottom:4px;"><span style="color:#9fe822;">🏦 The reward:</span> Win the mini-game → <strong style="color:#9fe822;">+$100 permanent bonus</strong> added to every future cashout.</div>
+              <div><span style="color:#94a3b8;">🔄 Safety net:</span> You can still Cash Out from <em>any open tier</em> after overtime. You're not out of the game.</div>
+            </div>
+            <button onclick="pbGoOvertime(); event.stopPropagation();"
+                    id="pbOvertimeBtn"
+                    style="width:100%; padding:14px; border-radius:8px; background:#9fe822; border:none; color:#000; font-weight:900; font-size:13px; letter-spacing:1px; cursor:pointer; text-transform:uppercase;">
+              GO OVERTIME!
+            </button>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- ── Footer ── -->
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#475569; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; gap:8px;">
+        <span>Grow views → return with your Player Code → unlock higher tiers</span>
+        <a href="/payout-board/live" style="color:#64748b; text-decoration:underline; font-size:12px;">← Live Board</a>
+      </div>
+
+      <!-- Cash Out Form (hidden until SECURE card click) -->
+      <div id="pbCashoutForm" style="display:none; margin-top:16px;">
+        <!-- Explanation. Why we're asking again -->
+        <div style="background:#0a0e1a; border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:14px 16px; margin-bottom:18px; font-size:12px; color:#64748b; line-height:1.8;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#94a3b8; margin-bottom:8px;">Why do we need this?</div>
+          <div>📊 <strong style="color:#e2e8f0;">Your current view count</strong> is the final number we pay out on. Views grow after you first submitted, so we capture the latest figure at cashout time.</div>
+          <div style="margin-top:6px;">📸 <strong style="color:#e2e8f0;">The screenshot</strong> is your proof of those views. Admin manually checks it matches before authorising payment via the payout provider. This is the last step before you get paid.</div>
+        </div>
+        <form method="POST" action="/payout-board/cashout" enctype="multipart/form-data">
+          <input type="hidden" name="email" value="{{ prefill_email }}">
+          <input type="hidden" name="code"  value="{{ plus_code | default('') }}">
+          <div class="pb-field-group">
+            <label class="pb-label" for="co_impressions">Your Current View Count</label>
+            <input class="pb-input {% if errors.co_impressions %}error{% endif %}"
+                   type="number" id="co_impressions" name="co_impressions"
+                   min="0" placeholder="e.g. 3500">
+            {% if errors.co_impressions %}<div class="pb-field-error">{{ errors.co_impressions }}</div>{% endif %}
+          </div>
+          <div class="pb-field-group">
+            <label class="pb-label" for="co_screenshot_file">Screenshot Showing That View Count</label>
+            <input class="pb-file-input {% if errors.co_screenshot %}error{% endif %}"
+                   type="file" id="co_screenshot_file" name="co_screenshot_file"
+                   accept="image/*" onchange="checkCoFileSize(this)">
+            {% if errors.co_screenshot %}<div class="pb-field-error">{{ errors.co_screenshot }}</div>{% endif %}
+            <div id="coFileSizeWarn" style="display:none;color:#f59e0b;font-size:11px;margin-top:4px;">
+              ⚠ File is large. Max 10 MB. Please compress before uploading.
+            </div>
+            <div style="font-size:11px;color:var(--pb-muted);margin-top:3px;">Max 10 MB · JPG, PNG, HEIC · Must match your view count above</div>
+          </div>
+          <button type="submit" class="pb-submit-btn">CONFIRM CASH OUT, ${{ total_prize }}</button>
+          <div style="margin-top:12px;">
+            <button onclick="pbHideCashoutForm()"
+                    style="width:100%; padding:13px; border-radius:8px; background:transparent;
+                           border:1px solid rgba(255,255,255,0.12); color:#94a3b8; font-weight:700;
+                           font-size:12px; letter-spacing:1px; cursor:pointer; text-transform:uppercase;
+                           transition:border-color .2s;"
+                    onmouseover="this.style.borderColor='rgba(255,255,255,0.3)'"
+                    onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'">
+              ← BACK TO CASH OUT / GO OVERTIME
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Mower Game Pane. Perfect Stripes -->
+      <div class="pb-mower-pane" id="pbMowerPane">
+
+        <!-- Outer header. Above the arcade cabinet -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="font-family:'Press Start 2P',monospace; font-size:9px; color:#9fe822;
+                      letter-spacing:2px; display:flex; align-items:center; gap:8px;">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%;
+                         background:#ef4444; box-shadow:0 0 6px #ef4444;
+                         animation:blink 1s step-end infinite;"></span>
+            OVERTIME ARCADE ACTIVE
+          </div>
+          <div style="font-size:10px; color:#475569; letter-spacing:1px; text-transform:uppercase;">
+            1x BONUS ATTEMPT
+          </div>
+        </div>
+
+        <!-- Arcade cabinet bezel -->
+        <div style="display:inline-block; background:#060608; border:4px solid #1e293b; border-radius:12px;
+                    box-shadow: inset 0 0 20px rgba(0,0,0,0.85), 0 8px 32px rgba(0,0,0,0.6);
+                    overflow:hidden; max-width:100%;">
+          <!-- HUD bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center;
+                      padding:8px 14px; background:#060608; border-bottom:2px solid #1e293b; gap:4px;">
+            <div style="font-family:'Press Start 2P',monospace; min-width:0;">
+              <div style="font-size:6px; color:#64748b; letter-spacing:1px; white-space:nowrap;">TIME LEFT</div>
+              <div style="font-size:14px; color:#f43f5e; line-height:1.2;" id="mwTime">60</div>
+            </div>
+            <div style="font-family:'Press Start 2P',monospace; text-align:center; min-width:0;">
+              <div style="font-size:6px; color:#64748b; letter-spacing:1px; white-space:nowrap;">LAWN DONE</div>
+              <div style="font-size:11px; color:#9fe822; line-height:1.2;" id="mwPct">0%</div>
+            </div>
+            <div style="font-family:'Press Start 2P',monospace; text-align:right; min-width:0;">
+              <div style="font-size:6px; color:#64748b; letter-spacing:1px; white-space:nowrap;">HOME IN</div>
+              <div style="font-size:14px; color:#f59e0b; line-height:1.2;" id="mwHomeTime">60</div>
+            </div>
+          </div>
+          <!-- Canvas + launch overlay -->
+          <div style="position:relative; line-height:0;">
+            <canvas id="mowerCanvas" width="400" height="400"
+                    style="display:block; width:min(400px, 90vw); height:auto;"></canvas>
+            <!-- Launch overlay. Scrollable on small screens, no overlap -->
+            <div id="mwLaunchOverlay"
+                 style="position:absolute;top:0;left:0;width:100%;height:100%;
+                        background:rgba(2,6,23,0.96);display:flex;flex-direction:column;
+                        align-items:center;justify-content:flex-start;z-index:10;
+                        overflow-y:auto;padding:16px 12px 20px;box-sizing:border-box;">
+
+              <!-- Tractor in green circle -->
+              <div style="width:56px;height:56px;border-radius:50%;background:#1a2e0a;
+                          border:2px solid #9fe822;display:flex;align-items:center;
+                          justify-content:center;font-size:26px;margin-bottom:10px;
+                          flex-shrink:0;">🚜</div>
+
+              <!-- Pixel title -->
+              <div style="font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,14px);
+                          color:#9fe822;letter-spacing:2px;text-align:center;
+                          margin-bottom:10px;line-height:1.6;">
+                MOW THE LAWN
+              </div>
+
+              <!-- Story description -->
+              <div style="font-size:clamp(11px,3.2vw,13px);color:#8BA3B8;text-align:center;
+                          line-height:1.65;margin-bottom:12px;max-width:290px;
+                          font-family:sans-serif;">
+                The owners are on their way home!<br>
+                Mow <strong style="color:#fff;">every patch of grass</strong>
+                before time runs out.<br>
+                <span style="color:#64748b;font-size:0.9em;">Rocks don't count. Only unmowed grass tiles need to be covered.</span>
+              </div>
+
+              <!-- Bonus pill -->
+              <div style="background:rgba(10,25,10,0.9);border:1px solid rgba(159,232,34,0.3);
+                          border-radius:20px;padding:7px 16px;margin-bottom:14px;
+                          font-size:clamp(11px,3vw,13px);color:#9fe822;font-family:sans-serif;
+                          white-space:nowrap;">
+                🎁 Permanent Bonus: <strong>+$100</strong>
+              </div>
+
+              <!-- Start button. LaunchMowerGame() calls initAudioEngine() internally -->
+              <button onclick="launchMowerGame();"
+                      style="background:#9fe822;color:#000;font-family:'Press Start 2P',monospace;
+                             font-size:clamp(9px,2.5vw,11px);padding:13px 24px;border:none;
+                             border-radius:8px;cursor:pointer;letter-spacing:1px;font-weight:900;
+                             white-space:nowrap;flex-shrink:0;">
+                START MOWER ENGINE 🚜
+              </button>
+
+              <!-- Controls hint -->
+              <div style="font-size:11px;color:#334155;margin-top:10px;text-align:center;
+                          line-height:1.5;font-family:sans-serif;">
+                Use your finger to drive the mower<br>
+                or the on-screen controls below
+              </div>
+            </div>
+          </div>
+        </div><!-- /cabinet -->
+
+        <!-- Controls: touch hint + circular joystick -->
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:12px;gap:8px;">
+
+          <div style="font-size:11px;color:#475569;letter-spacing:0.5px;text-align:center;">
+            👆 Swipe the lawn directly. Or use the joystick below
+          </div>
+
+          <!-- Circular joystick -->
+          <div style="position:relative;width:136px;height:136px;
+                      background:rgba(0,0,0,0.35);border-radius:50%;
+                      border:2px solid rgba(255,255,255,0.08);">
+            <!-- Up -->
+            <div class="pb-mower-btn" id="mwBtnUp"
+                 onpointerdown="mwDir('up')" onpointerup="mwRelease('up')" onpointerleave="mwRelease('up')"
+                 style="position:absolute;top:6px;left:50%;transform:translateX(-50%);
+                        width:44px;height:44px;">▲</div>
+            <!-- Down -->
+            <div class="pb-mower-btn" id="mwBtnDown"
+                 onpointerdown="mwDir('down')" onpointerup="mwRelease('down')" onpointerleave="mwRelease('down')"
+                 style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+                        width:44px;height:44px;">▼</div>
+            <!-- Left -->
+            <div class="pb-mower-btn" id="mwBtnLeft"
+                 onpointerdown="mwDir('left')" onpointerup="mwRelease('left')" onpointerleave="mwRelease('left')"
+                 style="position:absolute;left:6px;top:50%;transform:translateY(-50%);
+                        width:44px;height:44px;">◀</div>
+            <!-- Right -->
+            <div class="pb-mower-btn" id="mwBtnRight"
+                 onpointerdown="mwDir('right')" onpointerup="mwRelease('right')" onpointerleave="mwRelease('right')"
+                 style="position:absolute;right:6px;top:50%;transform:translateY(-50%);
+                        width:44px;height:44px;">▶</div>
+            <!-- Centre -->
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                        width:38px;height:38px;border-radius:50%;
+                        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:17px;pointer-events:none;">🖐</div>
+          </div>
+
+          <div style="font-size:10px;color:#334155;text-align:center;">
+            Arrow keys / WASD also work on desktop
+          </div>
+        </div>
+      </div>
+
+      <!-- Mower Result Pane. Filled by endGame() -->
+      <div class="pb-mower-result" id="pbMowerResult">
+        <!-- JS writes rich win/lose content here -->
+      </div>
+
+    </div>
+
+    <script>
+    function checkCoFileSize(input) {
+      var warn = document.getElementById('coFileSizeWarn');
+      if (warn && input.files && input.files[0]) {
+        warn.style.display = input.files[0].size > 10 * 1024 * 1024 ? 'block' : 'none';
+      }
+    }
+    (function () {
+      var EMAIL     = {{ prefill_email | tojson }};
+      var PCODE     = {{ (plus_code | default('')) | tojson }};
+      var BASE      = {{ tc.prize }};
+      var TIER_NAME = {{ tc.name | tojson }};
+
+      /* ── Panel navigation ──────────────────────────────── */
+
+      function pbShowCashoutForm() {
+        document.getElementById('pbDecisionArea').style.display = 'none';
+        document.getElementById('pbCashoutForm').style.display  = 'block';
+        document.getElementById('pbCashoutForm').scrollIntoView({behavior:'smooth', block:'start'});
+      }
+      function pbHideCashoutForm() {
+        document.getElementById('pbCashoutForm').style.display  = 'none';
+        document.getElementById('pbDecisionArea').style.display = 'block';
+      }
+      function pbShowMowerGame() {
+        document.getElementById('pbDecisionArea').style.display = 'none';
+        document.getElementById('pbMowerPane').style.display    = 'block';
+        document.getElementById('pbMowerPane').scrollIntoView({behavior:'smooth', block:'start'});
+        drawIdleScreen();
+      }
+
+      /* ── GO OVERTIME. Show on-brand modal, then release spot → launch game ── */
+
+      function pbGoOvertime() {
+        /* Show custom modal instead of native browser confirm */
+        var modal = document.getElementById('pbOvertimeModal');
+        if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+      }
+      function pbCancelOvertime() {
+        var modal = document.getElementById('pbOvertimeModal');
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+      }
+      function pbConfirmOvertime() {
+        var modal = document.getElementById('pbOvertimeModal');
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+
+        var btn = document.getElementById('pbOvertimeBtn');
+        if (btn) { btn.textContent = 'Releasing spot…'; btn.disabled = true; }
+
+        fetch('/payout-board/go-overtime', {
+          method:  'POST',
+          headers: {'Content-Type': 'application/json'},
+          body:    JSON.stringify(PCODE ? {code: PCODE} : {email: EMAIL})
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.ok) {
+            alert(data.error || 'Could not go overtime. Try again.');
+            if (btn) { btn.textContent = 'GO OVERTIME!'; btn.disabled = false; }
+            return;
+          }
+          /* Spot released. Launch the mini-game immediately */
+          pbShowMowerGame();
+        })
+        .catch(function() {
+          alert('Network error. Please try again.');
+          if (btn) { btn.textContent = 'GO OVERTIME!'; btn.disabled = false; }
+        });
+      }
+
+      window.pbShowCashoutForm = pbShowCashoutForm;
+      window.pbHideCashoutForm = pbHideCashoutForm;
+      window.pbShowMowerGame   = pbShowMowerGame;
+      window.pbGoOvertime      = pbGoOvertime;
+      window.pbCancelOvertime  = pbCancelOvertime;
+      window.pbConfirmOvertime = pbConfirmOvertime;
+
+      /* ══════════════════════════════════════════════════════
+         PERFECT STRIPES. Game Boy Chiptune Mini-Game
+         Grid: 16×16 tiles @ 25px = 400×400px canvas
+         Timer: 60 seconds
+         Tiles: 0=LONG_GRASS  1=MOWED  2=ROCK
+         ══════════════════════════════════════════════════════ */
+
+      var TILE_LONG  = 0;
+      var TILE_MOWED = 1;
+      var TILE_ROCK  = 2;
+
+      var GRID = 16, CELL = 25, GAME_TIME = 60;
+      var ROCKS = Math.floor(Math.random() * 6) + 15; /* random 15–20 rocks per session */
+      var canvas, ctx;
+      var grid, mowerX, mowerY, mowerAngle, bladeAngle;
+      var mowedCount, totalMowable;
+      var timerInt, moveInt, rafId, timeLeft, gameOver;
+      var heldDir = null;
+      var gameStarted = false;
+      /* Smoke particles [{x, y, vx, vy, alpha, r}] */
+      var particles = [];
+
+      /* Background music */
+      var bgMusicTimer = null;
+      /* Touch drag state */
+      var touchStartX = 0, touchStartY = 0;
+
+      /* ── Web Audio. Game Boy Chiptune Engine ──────────── */
+      var audioCtx = null;
+
+      function initAudioEngine() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        /* iOS Safari keeps AudioContext suspended until a user-gesture resumes it.
+           Resume immediately since this function is always called from a tap/click. */
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }
+
+      function playRetroSound(soundType) {
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var now = audioCtx.currentTime;
+
+        if (soundType === 'mow') {
+          /* Square Channel 1. Fast upward grass-cut sweep */
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now); osc.stop(now + 0.09);
+
+        } else if (soundType === 'crash') {
+          /* Noise Channel. Heavy downward slide on rock impact */
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.linearRampToValueAtTime(30, now + 0.18);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now); osc.stop(now + 0.2);
+
+        } else if (soundType === 'win') {
+          /* Pitch Arpeggio. Authentic 8-bit C major stage clear fanfare */
+          var notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+          var noteLen = 0.09;
+          notes.forEach(function(freq, i) {
+            var osc = audioCtx.createOscillator();
+            var gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, now + i * noteLen);
+            gain.gain.setValueAtTime(0.20, now + i * noteLen);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * noteLen + noteLen - 0.01);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now + i * noteLen); osc.stop(now + i * noteLen + noteLen);
+          });
+
+        } else if (soundType === 'tick') {
+          /* Square Channel 2. Crisp warning beep for low timer */
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(880, now);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now); osc.stop(now + 0.06);
+
+        } else if (soundType === 'lose') {
+          /* Sad descending arpeggio. Game over failure */
+          var notes = [392, 330, 261, 196];
+          var noteLen = 0.13;
+          notes.forEach(function(freq, i) {
+            var osc = audioCtx.createOscillator();
+            var gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, now + i * noteLen);
+            gain.gain.setValueAtTime(0.18, now + i * noteLen);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * noteLen + noteLen - 0.02);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now + i * noteLen); osc.stop(now + i * noteLen + noteLen);
+          });
+
+        } else if (soundType === 'click') {
+          /* Button press click */
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(620, now);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now); osc.stop(now + 0.05);
+        }
+      }
+
+      /* ── Background music ─────────────────────────────────── */
+      /* 8-bit chiptune loop: C-E-G-E-C-E-G-B-C' */
+      var BG_MELODY = [262,330,392,330,262,330,392,494,523,494,392,330];
+      var BG_NOTE_LEN = 0.16; /* seconds per note */
+      var BG_LOOP_LEN = BG_MELODY.length * BG_NOTE_LEN * 1000; /* ms */
+
+      function playBGMelody() {
+        if (!audioCtx || gameOver) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        var now = audioCtx.currentTime;
+        BG_MELODY.forEach(function(freq, i) {
+          var osc  = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, now + i * BG_NOTE_LEN);
+          gain.gain.setValueAtTime(0.06, now + i * BG_NOTE_LEN);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * BG_NOTE_LEN + BG_NOTE_LEN * 0.75);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now + i * BG_NOTE_LEN);
+          osc.stop(now + i * BG_NOTE_LEN + BG_NOTE_LEN);
+        });
+      }
+
+      function startBGMusic() {
+        if (!audioCtx) return;
+        playBGMelody();
+        bgMusicTimer = setInterval(playBGMelody, BG_LOOP_LEN);
+      }
+
+      function stopBGMusic() {
+        if (bgMusicTimer) { clearInterval(bgMusicTimer); bgMusicTimer = null; }
+      }
+
+      /* ── Launch overlay ────────────────────────────────── */
+      window.launchMowerGame = function() {
+        initAudioEngine();          /* must be in a user-gesture call chain */
+        playRetroSound('click');    /* now safe. AudioCtx exists */
+        document.getElementById('mwLaunchOverlay').style.display = 'none';
+        if (!gameStarted) { gameStarted = true; startMowerGame(); startBGMusic(); }
+      };
+
+      /* Draw a static idle screen on the canvas before game starts */
+      function drawIdleScreen() {
+        canvas = document.getElementById('mowerCanvas');
+        ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(0, 0, 400, 400);
+        for (var r = 0; r < GRID; r++) {
+          for (var c = 0; c < GRID; c++) {
+            ctx.fillStyle = (r + c) % 2 === 0 ? '#15803d' : '#166534';
+            ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+          }
+        }
+      }
+
+      /* ── Game init ─────────────────────────────────────── */
+      function startMowerGame() {
+        canvas = document.getElementById('mowerCanvas');
+        ctx    = canvas.getContext('2d');
+
+        grid = []; mowedCount = 0; timeLeft = GAME_TIME;
+        gameOver = false; heldDir = null; mowerAngle = 0; bladeAngle = 0;
+        particles = [];
+
+        /* Build grid. All unmowed */
+        for (var r = 0; r < GRID; r++) {
+          grid[r] = [];
+          for (var c = 0; c < GRID; c++) grid[r][c] = TILE_LONG;
+        }
+
+        /* Scatter rocks away from spawn (top-left 2×2 safe zone) */
+        var placed = 0;
+        while (placed < ROCKS) {
+          var rr = Math.floor(Math.random() * GRID);
+          var cc = Math.floor(Math.random() * GRID);
+          if (grid[rr][cc] === TILE_LONG && !(rr <= 1 && cc <= 1)) {
+            grid[rr][cc] = TILE_ROCK;
+            placed++;
+          }
+        }
+
+        totalMowable = GRID * GRID - ROCKS;
+        mowerX = 0; mowerY = 0;
+        grid[0][0] = TILE_MOWED;
+        mowedCount = 1;
+
+        drawGame();
+        updateHUD();
+
+        /* ── Touch drag: swipe anywhere on the canvas to steer ── */
+        canvas.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }, {passive: false});
+        canvas.addEventListener('touchmove', function(e) {
+          e.preventDefault();
+          if (gameOver) return;
+          var cx = e.touches[0].clientX, cy = e.touches[0].clientY;
+          var dx = cx - touchStartX, dy = cy - touchStartY;
+          var threshold = 8;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            if (Math.abs(dx) > threshold) {
+              var newDir = dx > 0 ? 'right' : 'left';
+              if (newDir !== heldDir) { heldDir = newDir; moveStep(); }
+              /* re-anchor so a short subsequent swipe changes direction cleanly */
+              touchStartX = cx; touchStartY = cy;
+            }
+          } else {
+            if (Math.abs(dy) > threshold) {
+              var newDir = dy > 0 ? 'down' : 'up';
+              if (newDir !== heldDir) { heldDir = newDir; moveStep(); }
+              touchStartX = cx; touchStartY = cy;
+            }
+          }
+        }, {passive: false});
+        canvas.addEventListener('touchend', function(e) {
+          e.preventDefault();
+          heldDir = null;
+        }, {passive: false});
+
+        timerInt = setInterval(function() {
+          if (gameOver) return;
+          timeLeft--;
+          updateHUD();
+          if (timeLeft <= 0) { endGame(false); }
+          else if (timeLeft < 15) { playRetroSound('tick'); }
+        }, 1000);
+
+        moveInt = setInterval(moveStep, 130);
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('keyup',   onKeyUp);
+
+        /* Start continuous render loop. Smooth blade spin + smoke particles */
+        rafId = requestAnimationFrame(rafLoop);
+      }
+
+      /* ── HUD ───────────────────────────────────────────── */
+      function pct() { return Math.round((mowedCount / totalMowable) * 100) + '%'; }
+
+      function updateHUD() {
+        var tEl  = document.getElementById('mwTime');
+        var hEl  = document.getElementById('mwHomeTime');
+        var pEl  = document.getElementById('mwPct');
+        if (tEl) {
+          tEl.textContent = timeLeft;
+          if (timeLeft < 15) {
+            tEl.style.color = '#ff6b6b';
+            tEl.style.textShadow = '0 0 8px #ff6b6b';
+            tEl.style.animation = 'blink 0.5s step-end infinite';
+          } else {
+            tEl.style.color = '#f43f5e';
+            tEl.style.textShadow = 'none';
+            tEl.style.animation = 'none';
+          }
+        }
+        if (hEl) {
+          hEl.textContent = timeLeft;
+          hEl.style.color = timeLeft < 15 ? '#ff6b6b' : '#f59e0b';
+          hEl.style.animation = timeLeft < 15 ? 'blink 0.5s step-end infinite' : 'none';
+        }
+        if (pEl) {
+          pEl.textContent = pct();
+          pEl.style.textShadow = '0 0 6px #9fe822';
+        }
+      }
+
+      /* ── Rendering ─────────────────────────────────────── */
+      function drawGame() {
+        for (var r = 0; r < GRID; r++) {
+          for (var c = 0; c < GRID; c++) {
+            var x = c * CELL, y = r * CELL;
+            if      (grid[r][c] === TILE_ROCK)  { drawRock(x, y); }
+            else if (grid[r][c] === TILE_MOWED) { drawMowed(x, y, c); }
+            else                                { drawGrass(x, y, r, c); }
+          }
+        }
+        drawMower();
+      }
+
+      function drawGrass(x, y, r, c) {
+        ctx.fillStyle = (r + c) % 2 === 0 ? '#15803d' : '#166534';
+        ctx.fillRect(x, y, CELL, CELL);
+        /* Grass blade lines */
+        ctx.strokeStyle = 'rgba(0,80,0,0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 7,  y + CELL); ctx.lineTo(x + 5,  y + 9);
+        ctx.moveTo(x + 17, y + CELL); ctx.lineTo(x + 19, y + 9);
+        ctx.stroke();
+      }
+
+      function drawMowed(x, y, col) {
+        /* Alternating lime / spring green stripes by column */
+        ctx.fillStyle = col % 2 === 0 ? '#22c55e' : '#4ade80';
+        ctx.fillRect(x, y, CELL, CELL);
+        /* Subtle mid-stripe shadow */
+        ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + CELL / 2); ctx.lineTo(x + CELL, y + CELL / 2);
+        ctx.stroke();
+      }
+
+      function drawRock(x, y) {
+        /* Granite body */
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.ellipse(x + CELL/2, y + CELL/2 + 1, CELL/2 - 2, CELL/2 - 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        /* Pixel highlight (top-left) */
+        ctx.fillStyle = '#64748b';
+        ctx.beginPath();
+        ctx.ellipse(x + CELL/2 - 3, y + CELL/2 - 3, 4, 3, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        /* Dark shadow edge */
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(x + CELL/2, y + CELL/2 + 1, CELL/2 - 2, CELL/2 - 3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      function drawSmoke() {
+        /* Update + draw exhaust particles */
+        particles = particles.filter(function(p) { return p.alpha > 0.02; });
+        particles.forEach(function(p) {
+          p.x += p.vx; p.y += p.vy;
+          p.alpha -= 0.04; p.r += 0.3;
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      function spawnSmoke() {
+        /* Emit 2 small smoke puffs from rear of mower */
+        var cx = mowerX * CELL + CELL / 2;
+        var cy = mowerY * CELL + CELL / 2;
+        /* rear offset relative to heading */
+        var rx = -Math.cos(mowerAngle) * 10;
+        var ry = -Math.sin(mowerAngle) * 10;
+        for (var i = 0; i < 2; i++) {
+          particles.push({
+            x: cx + rx + (Math.random() - 0.5) * 4,
+            y: cy + ry + (Math.random() - 0.5) * 4,
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: (Math.random() - 0.5) * 0.8 - 0.4,
+            alpha: 0.55,
+            r: 2
+          });
+        }
+      }
+
+      function drawMower() {
+        bladeAngle += 0.6; /* spin the blade ~35 RPM per render */
+        var cx = mowerX * CELL + CELL / 2;
+        var cy = mowerY * CELL + CELL / 2;
+
+        /* Smoke underneath mower (drawn first, behind chassis) */
+        drawSmoke();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(mowerAngle);
+
+        /* Shadow */
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(2, 2, 10, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        /* Red chassis body */
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-9, -7, 18, 14);
+
+        /* Chassis detail stripe */
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(-4, -7, 6, 14);
+
+        /* 4 black rubber wheels */
+        ctx.fillStyle = '#111111';
+        [[-7,-5],[7,-5],[-7,5],[7,5]].forEach(function(p) {
+          ctx.beginPath(); ctx.arc(p[0], p[1], 3.5, 0, Math.PI * 2); ctx.fill();
+          /* wheel rim highlight */
+          ctx.fillStyle = '#374151';
+          ctx.beginPath(); ctx.arc(p[0], p[1], 1.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#111111';
+        });
+
+        /* Spinning blade disc at front */
+        ctx.save();
+        ctx.translate(10, 0);
+        ctx.rotate(bladeAngle);
+        /* Blade disc */
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        ctx.fill();
+        /* 3 blade arms */
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        for (var b = 0; b < 3; b++) {
+          var ba = (b / 3) * Math.PI * 2 + bladeAngle * 0;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(ba) * 5, Math.sin(ba) * 5);
+          ctx.stroke();
+        }
+        /* Centre bolt */
+        ctx.fillStyle = '#475569';
+        ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        /* Exhaust pipe on rear */
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(-10, -2, 3, 4);
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-12, -1, 2, 2);
+
+        ctx.restore();
+      }
+
+      /* ── Input ─────────────────────────────────────────── */
+      function mwDir(d) {
+        heldDir = d;
+        var ids = {up:'mwBtnUp',down:'mwBtnDown',left:'mwBtnLeft',right:'mwBtnRight'};
+        var el = document.getElementById(ids[d]);
+        if (el) el.classList.add('pressed');
+      }
+      function mwRelease(d) {
+        if (heldDir === d) heldDir = null;
+        var ids = {up:'mwBtnUp',down:'mwBtnDown',left:'mwBtnLeft',right:'mwBtnRight'};
+        var el = document.getElementById(ids[d]);
+        if (el) el.classList.remove('pressed');
+      }
+      window.mwDir     = mwDir;
+      window.mwRelease = mwRelease;
+
+      var KEY_MAP = {
+        ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+        w:'up', s:'down', a:'left', d:'right',
+        W:'up', S:'down', A:'left', D:'right'
+      };
+      function onKey(e) {
+        if (KEY_MAP[e.key]) { heldDir = KEY_MAP[e.key]; e.preventDefault(); }
+      }
+      function onKeyUp(e) {
+        if (KEY_MAP[e.key] && heldDir === KEY_MAP[e.key]) heldDir = null;
+      }
+
+      /* ── Move step (called every 130ms) ────────────────── */
+      function moveStep() {
+        if (gameOver || !heldDir) return;
+        var nr = mowerY, nc = mowerX;
+        if (heldDir === 'up')    { nr--; mowerAngle = -Math.PI / 2; }
+        if (heldDir === 'down')  { nr++; mowerAngle =  Math.PI / 2; }
+        if (heldDir === 'left')  { nc--; mowerAngle =  Math.PI;     }
+        if (heldDir === 'right') { nc++; mowerAngle =  0;           }
+
+        if (nr < 0 || nr >= GRID || nc < 0 || nc >= GRID) return;
+
+        if (grid[nr][nc] === TILE_ROCK) {
+          playRetroSound('crash');
+          return; /* halt. Cannot pass through rocks */
+        }
+
+        var wasLong = grid[nr][nc] === TILE_LONG;
+        mowerY = nr; mowerX = nc;
+
+        if (wasLong) {
+          grid[nr][nc] = TILE_MOWED;
+          mowedCount++;
+          playRetroSound('mow');
+        }
+
+        spawnSmoke();
+        updateHUD();
+        if (mowedCount >= totalMowable) endGame(true);
+      }
+
+      /* ── Render loop (requestAnimationFrame) ─────────── */
+      function rafLoop() {
+        if (gameOver) return;
+        drawGame();
+        rafId = requestAnimationFrame(rafLoop);
+      }
+
+      /* ── End game ──────────────────────────────────────── */
+      function endGame(won) {
+        gameOver = true;
+        stopBGMusic();
+        clearInterval(timerInt); clearInterval(moveInt);
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        document.removeEventListener('keydown', onKey);
+        document.removeEventListener('keyup',   onKeyUp);
+        heldDir = null;
+
+        var boardUrl  = PCODE ? '/payout-board/live?code=' + encodeURIComponent(PCODE) : '/payout-board/live';
+        var updateUrl = PCODE ? '/payout-board/live?code=' + encodeURIComponent(PCODE) : '/payout-board/live';
+
+        /* Always mark has_played_minigame=1 to block replay exploits */
+        if (won) {
+          /* WIN: award bonus + set flag via mower-bonus endpoint */
+          playRetroSound('win');
+          fetch('/payout-board/mower-bonus', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(PCODE ? {code: PCODE} : {email: EMAIL})
+          }).catch(function(){});
+        } else {
+          /* LOSS: set played flag only. No bonus awarded */
+          playRetroSound('lose');
+          fetch('/payout-board/minigame-played', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(PCODE ? {code: PCODE} : {email: EMAIL})
+          }).catch(function(){});
+        }
+
+        document.getElementById('pbMowerPane').style.display   = 'none';
+        var resultPane = document.getElementById('pbMowerResult');
+        resultPane.style.display = 'block';
+        resultPane.scrollIntoView({behavior:'smooth', block:'start'});
+
+        var sharedButtons =
+          '<div style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">'
+          + '<a href="' + boardUrl + '" style="display:block;padding:15px;border-radius:8px;'
+          + 'background:#9fe822;color:#000;font-weight:900;font-size:13px;letter-spacing:1px;'
+          + 'text-transform:uppercase;text-align:center;text-decoration:none;">'
+          + 'RETURN TO LIVE BOARD →</a>'
+          + '<a href="' + updateUrl + '" style="display:block;padding:14px;border-radius:8px;'
+          + 'background:transparent;border:1px solid rgba(255,255,255,0.15);color:#94a3b8;'
+          + 'font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;'
+          + 'text-align:center;text-decoration:none;">'
+          + 'SUBMIT UPDATED VIEWS</a>'
+          + '</div>';
+
+        if (won) {
+          resultPane.innerHTML =
+            '<div style="text-align:center;padding:32px 20px;background:#080d1a;border-radius:16px;'
+            + 'border:2px solid rgba(159,232,34,0.25);">'
+            + '<div style="font-family:\'Press Start 2P\',monospace;font-size:clamp(16px,5vw,22px);'
+            + 'color:#9fe822;line-height:1.7;margin-bottom:14px;">LAWN<br>PERFECT!</div>'
+            + '<div style="font-size:52px;margin-bottom:14px;">🚜</div>'
+            + '<div style="font-size:14px;color:#94a3b8;line-height:1.65;margin-bottom:20px;">'
+            + 'You mowed every patch<br>before the owners got home!</div>'
+            + '<div style="font-family:\'Press Start 2P\',monospace;font-size:9px;color:#9fe822;'
+            + 'letter-spacing:2px;margin-bottom:6px;">PERMANENT BONUS EARNED</div>'
+            + '<div style="font-family:\'Press Start 2P\',monospace;font-size:26px;color:#9fe822;'
+            + 'margin-bottom:4px;">+$100</div>'
+            + '<div style="font-size:12px;color:#64748b;margin-bottom:6px;">'
+            + 'Added to your Bonus Bank.</div>'
+            + sharedButtons
+            + '</div>';
+        } else {
+          resultPane.innerHTML =
+            '<div style="text-align:center;padding:32px 20px;background:#0d0a0a;border-radius:16px;'
+            + 'border:2px solid rgba(239,68,68,0.2);">'
+            + '<div style="font-family:\'Press Start 2P\',monospace;font-size:clamp(13px,4.5vw,18px);'
+            + 'color:#f43f5e;line-height:1.7;margin-bottom:14px;">RAN OUT<br>OF TIME!</div>'
+            + '<div style="font-size:52px;margin-bottom:14px;">🏠</div>'
+            + '<div style="font-size:14px;color:#94a3b8;line-height:1.65;margin-bottom:16px;">'
+            + 'The owners got home.<br>Better luck next time!</div>'
+            + '<div style="padding:12px 16px;background:rgba(15,25,46,0.8);border:1px solid rgba(255,255,255,0.07);'
+            + 'border-radius:8px;font-size:12px;color:#64748b;line-height:1.7;margin-bottom:4px;">'
+            + 'You\'re still in the game. Keep growing your views and return with your Player Code '
+            + 'to unlock higher tiers or cash out from any open tier you qualify for.'
+            + '</div>'
+            + sharedButtons
+            + '</div>';
+        }
+      }
+    })();
+    </script>
+
+    {% endif %}
+    {% endif %}
+
+  {% endif %}
+
+{% else %}
+<!-- Default: no email yet -->
+<div class="pb-co-card">
+  <div class="pb-section-label" style="justify-content:flex-start;margin-bottom:4px;">CASH OUT</div>
+  <div style="font-size:13px;color:var(--pb-muted);margin-bottom:24px;line-height:1.5;">
+    Enter your email to see your current tier status and lock in your payout.
+  </div>
+  <form method="GET" action="/payout-board/cashout">
+    <div class="pb-field-group">
+      <label class="pb-label" for="email_main">Your Email</label>
+      <input class="pb-input" type="email" id="email_main" name="email"
+             value="{{ prefill_email }}" autocomplete="email" required placeholder="your@email.com">
+    </div>
+    <button type="submit" class="pb-submit-btn">CHECK MY STATUS</button>
+  </form>
+  <div style="text-align:center;margin-top:16px;">
+    <a href="/payout-board/submit" style="font-size:12px;color:var(--pb-green);text-decoration:none;font-family:var(--pb-font);font-weight:700;letter-spacing:1px;text-transform:uppercase;">HAVEN'T SUBMITTED YET? →</a>
+  </div>
+</div>
+{% endif %}
+
+  {% endif %}{# /if confirmed #}
+
+  <div style="text-align:center;margin-top:24px;">
+    <a href="/payout-board/live" style="font-size:13px;color:var(--pb-muted);text-decoration:none;font-family:var(--pb-font);font-weight:700;letter-spacing:1px;text-transform:uppercase;">← BACK TO THE BOARD</a>
+  </div>
+
+</div>
+
+<!-- ── Go Overtime Confirmation Modal ─────────────────────────── -->
+<div id="pbOvertimeModal"
+     style="display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; background:rgba(2,6,23,0.88); backdrop-filter:blur(6px);"
+     onclick="if(event.target===this) pbCancelOvertime()">
+  <div style="background:#0a0e1a; border:1px solid rgba(159,232,34,0.3); border-radius:16px; padding:28px 24px; max-width:440px; width:100%; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+    <div style="font-size:10px; letter-spacing:2px; color:#9fe822; text-transform:uppercase; margin-bottom:10px; font-weight:700;">⚡ GO OVERTIME?</div>
+    <div style="font-size:18px; font-weight:900; color:#fff; margin-bottom:18px;">Are you sure you want to go overtime?</div>
+    <div style="font-size:13px; color:#8BA3B8; line-height:2; margin-bottom:22px;">
+      If you continue:<br>
+      <span style="color:#f87171; font-weight:700;">●</span> Your current tier spot will be released.<br>
+      <span style="color:#f87171; font-weight:700;">●</span> Another creator can take that spot.<br>
+      <span style="color:#9fe822; font-weight:700;">●</span> You will unlock the <strong style="color:#fff;">Perfect Stripes</strong> mini-game.<br>
+      <span style="color:#9fe822; font-weight:700;">●</span> Win → <strong style="color:#9fe822;">+$100 permanently added</strong> to your Bonus Bank.<br>
+      <span style="color:#94a3b8; font-weight:700;">●</span> Lose → $0 bonus, but you stay active in the game.<br>
+      <span style="color:#94a3b8; font-weight:700;">●</span> You can still return with your Player Code and cash out from any open tier you qualify for.
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button onclick="pbConfirmOvertime()"
+              style="width:100%; padding:15px; border-radius:8px; background:#9fe822; border:none; color:#000; font-weight:900; font-size:13px; letter-spacing:1px; cursor:pointer; text-transform:uppercase;">
+        YES, GO OVERTIME ⚡
+      </button>
+      <button onclick="pbCancelOvertime()"
+              style="width:100%; padding:15px; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.15); color:#94a3b8; font-weight:700; font-size:13px; letter-spacing:1px; cursor:pointer; text-transform:uppercase;">
+        CANCEL. KEEP MY SPOT
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

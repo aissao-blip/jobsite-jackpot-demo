@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobsite Jackpot. Submit</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/payout_board.css') }}">
+</head>
+<body class="pb-page">
+<div style="max-width:560px;margin:0 auto;padding:40px 20px;">
+
+{% if game_over %}
+<div class="pb-card" style="text-align:center;">
+  <div style="font-size:44px;margin-bottom:8px;">🏁</div>
+  <div style="font-size:22px;font-weight:900;margin-bottom:8px;">The game has ended</div>
+  <div style="font-size:13px;color:var(--pb-muted);line-height:1.7;margin-bottom:20px;">
+    Thanks for playing Jobsite Jackpot. New entries are closed and winners are being paid out via the payout provider.
+  </div>
+  <a href="/payout-board/live"
+     style="display:block;width:100%;text-align:center;background:var(--pb-green);color:#000;
+            font-weight:900;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+            padding:14px 24px;border-radius:4px;text-decoration:none;box-sizing:border-box;">
+    VIEW THE FINAL BOARD →
+  </a>
+</div>
+
+{% elif confirmed %}
+<div class="pb-receipt-card">
+  <div class="pb-receipt-icon">⚡</div>
+  <div class="pb-receipt-title">YOU ARE IN THE GAME</div>
+  <div style="margin:16px 0 24px;">
+    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--pb-muted);margin-bottom:6px;">YOUR BOARD ALIAS</div>
+    <div class="pb-alias-badge">{{ alias }}</div>
+  </div>
+  <div style="margin-bottom:24px;">
+    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--pb-muted);margin-bottom:8px;">YOUR PLAYER CODE</div>
+    <div class="pb-code-badge" id="playerCodeDisplay">{{ plus_code }}</div>
+    <button onclick="copyPlayerCode()" id="copyBtn"
+            style="margin-top:10px;background:transparent;border:1px solid var(--pb-green);
+                   color:var(--pb-green);font-size:11px;font-weight:700;letter-spacing:1px;
+                   text-transform:uppercase;padding:8px 18px;border-radius:4px;cursor:pointer;">
+      COPY CODE
+    </button>
+  </div>
+
+  {% if qualified_tier and qualified_tier > 0 %}
+  <!-- Player qualifies right now. Tell them immediately and link direct to decision page -->
+  <div style="background:rgba(159,232,34,0.06);border:1px solid rgba(159,232,34,0.3);border-radius:8px;padding:18px;margin-bottom:20px;text-align:center;">
+    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--pb-green);margin-bottom:6px;">🎯 You Already Qualify</div>
+    <div style="font-size:22px;font-weight:900;color:#fff;margin-bottom:2px;">{{ qualified_tier_name }}</div>
+    <div style="font-size:28px;font-weight:900;color:var(--pb-green);margin-bottom:10px;">${{ qualified_tier_prize }}</div>
+    <div style="font-size:12px;color:var(--pb-muted);margin-bottom:14px;line-height:1.5;">
+      Your submitted views qualify you for a payout right now.<br>Head to your decision page to Cash Out or Go Overtime.
+    </div>
+    <a href="{{ cashout_url }}" style="display:block;background:var(--pb-green);color:#000;font-weight:900;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:4px;text-decoration:none;text-align:center;">
+      GO TO MY DECISION PAGE →
+    </a>
+  </div>
+  {% else %}
+  <!-- Player doesn't qualify yet. Explain what to do next -->
+  <div style="font-size:12px;color:var(--pb-muted);line-height:1.7;margin-bottom:20px;text-align:left;padding:16px;background:var(--pb-surface2);border-radius:6px;">
+    <strong style="color:var(--pb-text);">You need 500+ views to unlock your first cash tier.</strong><br>
+    Keep growing your post. When you hit a threshold, come back with your Player Code to claim your payout.
+  </div>
+  <a href="/payout-board/live?code={{ plus_code }}" style="display:block;background:var(--pb-green);color:#000;font-weight:900;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:4px;text-decoration:none;text-align:center;margin-bottom:12px;">
+    WATCH THE BOARD →
+  </a>
+  {% endif %}
+
+  <div style="background:rgba(159,232,34,0.06);border:1px solid rgba(159,232,34,0.2);border-radius:8px;padding:14px 16px;margin-top:16px;text-align:center;">
+    <div style="font-size:13px;color:var(--pb-text);font-weight:700;margin-bottom:4px;">📬 Check your inbox for your confirmation email</div>
+    <div style="font-size:12px;color:var(--pb-muted);line-height:1.6;">
+      Don't see it? Go dig through your spam/junk folder. Our email has a bad habit of clocking out early.
+    </div>
+  </div>
+
+  <div style="font-size:11px;color:var(--pb-muted);line-height:1.6;text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);">
+    Your Player Code is also in your confirmation email.<br>
+    Your alias is your anonymous public identity. Your real name is never shown.
+  </div>
+</div>
+<script>
+function checkFileSize(input) {
+  var warn = document.getElementById('fileSizeWarning');
+  if (input.files && input.files[0]) {
+    var sizeMB = input.files[0].size / (1024 * 1024);
+    warn.style.display = sizeMB > 10 ? 'block' : 'none';
+  }
+}
+function copyPlayerCode() {
+  var code = document.getElementById('playerCodeDisplay').textContent.trim();
+  navigator.clipboard.writeText(code).then(function() {
+    var btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ COPIED!';
+    btn.style.background = 'var(--pb-green)';
+    btn.style.color = '#000';
+    setTimeout(function() {
+      btn.textContent = 'COPY CODE';
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--pb-green)';
+    }, 2000);
+  }).catch(function() {
+    // Fallback for older browsers
+    var el = document.createElement('textarea');
+    el.value = code;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    var btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ COPIED!';
+    setTimeout(function() { btn.textContent = 'COPY CODE'; }, 2000);
+  });
+}
+</script>
+
+{% elif already_in %}
+<!-- Already-in-the-game state. A returning creator tried to submit again.
+     This is NOT an error; it's the one-entry-per-creator guard being friendly. -->
+<div class="pb-card" style="text-align:center;">
+  <div style="font-size:40px;margin-bottom:8px;">🎮</div>
+  <div style="font-size:22px;font-weight:900;margin-bottom:8px;">You're already in the game!</div>
+  <div style="font-size:13px;color:var(--pb-muted);line-height:1.7;margin-bottom:20px;">
+    {% if already_in_email %}<strong style="color:var(--pb-text);">{{ already_in_email }}</strong> is already registered for Jobsite Jackpot.{% else %}That email is already registered for Jobsite Jackpot.{% endif %}
+    You don't need to submit again. It's <strong style="color:var(--pb-text);">one entry per creator</strong>.
+  </div>
+  <div style="background:var(--pb-surface2);border-radius:8px;padding:16px;margin-bottom:20px;font-size:12px;color:var(--pb-muted);line-height:1.7;text-align:left;">
+    To check your status, submit updated views, or cash out, head to the board and
+    <strong style="color:var(--pb-text);">log in with the Player Code</strong> from your confirmation email.
+    <br><br>
+    Trying a different email won't create a second entry. Extra entries are disqualified.
+  </div>
+  <a href="/payout-board/live"
+     style="display:block;width:100%;text-align:center;background:var(--pb-green);color:#000;
+            font-weight:900;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+            padding:14px 24px;border-radius:4px;text-decoration:none;box-sizing:border-box;">
+    GO TO THE BOARD →
+  </a>
+  <div style="font-size:11px;color:var(--pb-muted);margin-top:12px;">
+    Lost your Player Code? It's in your confirmation email.
+  </div>
+</div>
+
+{% else %}
+<!-- Error state. Never show the full personal-info form again here.
+     The full form lives only at /payout-board/live. -->
+<div class="pb-card">
+  <div style="margin-bottom:20px;">
+    <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--pb-danger);margin-bottom:6px;">SUBMISSION FAILED</div>
+    <div style="font-size:20px;font-weight:900;margin-bottom:4px;">Something Needs Fixing</div>
+    <div style="font-size:13px;color:var(--pb-muted);">Your info was not saved. Please fix the issue below and try again.</div>
+  </div>
+
+  <!-- Show every specific error that came back from the route -->
+  <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:16px;margin-bottom:24px;">
+    {% if errors %}
+      {% for field, msg in errors.items() %}
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:{% if not loop.last %}10px{% else %}0{% endif %};">
+          <span style="color:var(--pb-danger);font-size:13px;">⚠</span>
+          <span style="font-size:13px;color:#f87171;line-height:1.5;">
+            <strong style="color:#fff;text-transform:capitalize;">{{ field.replace('_',' ') }}:</strong>
+            {{ msg }}
+          </span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:13px;color:#f87171;">An unexpected error occurred. Please try again.</div>
+    {% endif %}
+  </div>
+
+  <a href="/payout-board/live"
+     style="display:block;width:100%;text-align:center;background:var(--pb-green);color:#000;
+            font-weight:900;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+            padding:14px 24px;border-radius:4px;text-decoration:none;box-sizing:border-box;">
+    ← GO BACK AND FIX IT
+  </a>
+  <div style="font-size:11px;color:var(--pb-muted);text-align:center;margin-top:12px;">
+    Your form data is waiting. Just correct the issue above and resubmit.
+  </div>
+</div>
+{% endif %}
+
+</div>
+</body>
+</html>

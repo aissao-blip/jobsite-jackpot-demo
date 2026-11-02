@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobsite Jackpot. Live Board</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand:   '#9fe822',
+            canvas:  '#080d1a',
+            surface: '#0f192e',
+            deep:    '#050a14',
+            card:    '#090e1a',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Animations + shared component styles (cashout, admin, muter, badges) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/payout_board.css') }}">
+
+  <style>
+    /* Tailwind conflict guards */
+    .pb-accordion-body         { display: none; }
+    .pb-accordion-body.open    { display: block; }
+    /* Keep pb-dot sizing when used alongside Tailwind */
+    .pb-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .pb-dot.claimed   { background: #9fe822; }
+    .pb-dot.available { background: transparent; border: 1px solid rgba(159,232,34,0.3); }
+    /* Native disclosure. Hide the default triangle so the summary reads as a clean line */
+    details.pb-reveal > summary { list-style: none; }
+    details.pb-reveal > summary::-webkit-details-marker { display: none; }
+    details.pb-reveal[open] .pb-reveal-hint { display: none; }
+  </style>
+</head>
+
+<body class="bg-canvas text-white min-h-screen font-sans">
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SECTION 1. SCROLLING TICKER                               ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+<div class="w-full overflow-hidden border-b border-brand/20 bg-black/25" style="height:34px;">
+  <div class="flex items-center h-full">
+    <div id="pb-ticker" class="inline-flex gap-12 whitespace-nowrap px-8 text-[10px] font-bold tracking-[0.18em] uppercase text-[#9fe822]"
+         style="animation: ticker-scroll 40s linear infinite;">
+      {% set events = [] %}
+      {% for sub in subs %}
+        {% if sub.cashed_out == 'Yes' %}{% set _ = events.append('🏆 ' ~ sub.alias ~ ' LOCKED IN ' ~ sub.cash_out_tier ~ ' PAY' ~ (' + MOWER WINNINGS!' if sub.mower_bonus > 0 else '!')) %}
+        {% elif sub.mower_bonus > 0 %}{% set _ = events.append('🔧 ' ~ sub.alias ~ ' WON +$' ~ sub.mower_bonus ~ ' MOWER BONUS') %}
+        {% elif sub.status == 'Overtime' %}{% set _ = events.append('⚡ ' ~ sub.alias ~ ' IS IN OVERTIME. RIDING FOR A BIGGER PAYOUT') %}
+        {% elif sub.status == 'Verified' %}{% set _ = events.append('✅ ' ~ sub.alias ~ ' IS VERIFIED AND QUALIFIED') %}
+        {% endif %}
+      {% endfor %}
+      {% set pending_count = subs | selectattr('status', 'equalto', 'Pending') | rejectattr('cashed_out', 'equalto', 'Yes') | list | length %}
+      {% if pending_count > 0 %}{% set _ = events.append('⚡ Review Queue: ' ~ pending_count ~ ' Awaiting Audit') %}{% endif %}
+      {% set total_secured = subs | selectattr('cashed_out', 'equalto', 'Yes') | list | length %}
+      {% if total_secured > 0 %}{% set _ = events.append('🔥 Pool Status: ' ~ total_secured ~ ' Secured Creator' ~ ('s' if total_secured != 1 else '') ~ ' on the Board') %}{% endif %}
+      {% if events %}
+        {% set ticker_text = events | join('  •  ') %}
+        <span>{{ ticker_text }}</span>
+        <span aria-hidden="true">{{ ticker_text }}</span>
+      {% else %}
+        <span>🚀 LAUNCH STATE ACTIVE &nbsp;•&nbsp; <span style="color:#9fe822;">AWAITING FIRST SUBMISSION</span> &nbsp;•&nbsp; POST YOUR CONTENT AND EARN CASH &nbsp;•&nbsp; LIMITED SPOTS AVAILABLE</span>
+        <span aria-hidden="true">🚀 LAUNCH STATE ACTIVE &nbsp;•&nbsp; <span style="color:#9fe822;">AWAITING FIRST SUBMISSION</span> &nbsp;•&nbsp; POST YOUR CONTENT AND EARN CASH &nbsp;•&nbsp; LIMITED SPOTS AVAILABLE</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SECTION 2. GRAND CARD (Hero + Live Board)                 ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+<div class="max-w-6xl mx-auto px-4 pt-5 pb-3">
+  <div class="relative rounded-3xl border border-slate-800/80 shadow-2xl overflow-hidden"
+       style="background: linear-gradient(to bottom, #132039, #0a1224); box-shadow: 0 25px 60px -10px rgba(0,0,0,0.7), 0 0 0 1px rgba(159,232,34,0.03), inset 0 1px 0 rgba(255,255,255,0.04);">
+
+    <!-- Accent blur. Top right -->
+    <div class="absolute top-0 right-0 w-80 h-80 pointer-events-none"
+         style="background: radial-gradient(circle, rgba(159,232,34,0.14) 0%, transparent 70%); transform: translate(35%,-35%); filter: blur(40px);"></div>
+
+    <!-- ── Hero Content ──────────────────────────────────────── -->
+    <div class="relative z-10 px-8 pt-7 pb-6">
+
+      <!-- Topbar: LIVE pill | center subtitle | right date -->
+      <div class="grid grid-cols-3 items-center mb-7">
+        <!-- LIVE pill -->
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border justify-self-start"
+             style="background: rgba(8,20,10,0.7); border-color: rgba(159,232,34,0.35); box-shadow: 0 0 12px rgba(159,232,34,0.12);">
+          <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style="background:#9fe822; animation: pulse-dot 2s ease-in-out infinite; box-shadow: 0 0 6px rgba(159,232,34,0.6);"></span>
+          <span class="text-[9px] font-semibold tracking-[0.2em] uppercase" style="color:rgba(255,255,255,0.75);">LIVE SYSTEM ACTIVE</span>
+        </div>
+        <!-- Center -->
+        <div class="text-[9px] tracking-[0.22em] text-slate-600 uppercase text-center">A CREATOR CASH GAME</div>
+        <!-- Right -->
+        <div class="text-right">
+          <span id="pbCountdownLabel"
+                class="text-[9px] font-bold tracking-[0.15em] uppercase
+                       {% if countdown_state == 'last_chance' %}text-red-400
+                       {% elif countdown_state == 'final_week' %}text-amber-400
+                       {% elif countdown_state == 'closed' %}text-slate-600
+                       {% else %}text-slate-400{% endif %}">
+            {{ countdown_label }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Live countdown timer. Elements required by refresh.js startCountdown -->
+      <!-- When game hasn't started yet, count down to start date; once live, count to end -->
+      {% if countdown_state != 'closed' %}
+      <div id="pbCountdown"
+           data-close-date="{{ game_start if countdown_state == 'upcoming' else game_end }}"
+           class="flex justify-center gap-4 mb-6 text-center">
+        <div>
+          <div id="pbDays" class="font-black text-white" style="font-size:clamp(20px,3.5vw,30px);font-variant-numeric:tabular-nums;">--</div>
+          <div class="text-[9px] text-slate-600 tracking-widest uppercase mt-0.5">Days</div>
+        </div>
+        <div class="text-slate-700 font-black self-start pt-1" style="font-size:clamp(20px,3.5vw,30px);">:</div>
+        <div>
+          <div id="pbHours" class="font-black text-white" style="font-size:clamp(20px,3.5vw,30px);font-variant-numeric:tabular-nums;">--</div>
+          <div class="text-[9px] text-slate-600 tracking-widest uppercase mt-0.5">Hrs</div>
+        </div>
+        <div class="text-slate-700 font-black self-start pt-1" style="font-size:clamp(20px,3.5vw,30px);">:</div>
+        <div>
+          <div id="pbMins" class="font-black text-white" style="font-size:clamp(20px,3.5vw,30px);font-variant-numeric:tabular-nums;">--</div>
+          <div class="text-[9px] text-slate-600 tracking-widest uppercase mt-0.5">Mins</div>
+        </div>
+        <div class="text-slate-700 font-black self-start pt-1" style="font-size:clamp(20px,3.5vw,30px);">:</div>
+        <div>
+          <div id="pbSecs" class="font-black text-white" style="font-size:clamp(20px,3.5vw,30px);font-variant-numeric:tabular-nums;">--</div>
+          <div class="text-[9px] text-slate-600 tracking-widest uppercase mt-0.5">Secs</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Hero Title -->
+      <div class="text-center mb-7">
+        <div class="font-black leading-none tracking-tight" style="font-size: clamp(44px, 7vw, 76px); color: #9fe822;">JOBSITE</div>
+        <div class="font-black leading-none tracking-tight" style="font-size: clamp(44px, 7vw, 76px); color: #ffffff;">JACKPOT</div>
+        <div class="w-16 h-0.5 mx-auto mt-3 mb-5" style="background:#9fe822;"></div>
+        <p class="text-[13px] leading-relaxed text-slate-400 max-w-lg mx-auto">
+          Earn views, unlock a cash tier, then make your move ,
+          <strong style="color:#9fe822;">Cash Out</strong> and lock in your prize,
+          or <strong style="color:#9fe822;">Go Overtime</strong> to release your spot,
+          grow your views, and play the mower mini-game for a permanent bonus.
+        </p>
+      </div>
+
+      <!-- 4 Hero Tier Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {% for tier in prize_tiers %}
+        <div class="rounded-2xl p-5 border flex flex-col text-center gap-1.5
+                    {% if loop.last %}border-brand/50{% else %}border-slate-700/50{% endif %}"
+             style="background: rgba(9,14,26,0.8);
+                    {% if loop.last %}box-shadow: 0 0 20px rgba(159,232,34,0.07);{% endif %}">
+          <div class="text-[10px] tracking-widest uppercase text-slate-400 mb-0.5">{{ tier.name }}</div>
+          <div class="font-black leading-none {% if loop.last %}text-brand{% else %}text-white{% endif %}"
+               style="font-size: clamp(28px, 4.5vw, 42px);">${{ '{:,}'.format(tier.prize) }}</div>
+          <div class="text-xs font-bold text-brand">{{ '{:,}'.format(tier.threshold) }}+ views</div>
+          <div class="mt-auto pt-2 border-t border-white/5">
+            <div class="text-[11px] text-slate-500">{{ tier.cap }} spots</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Hero Footer Bar -->
+      <div class="flex items-center justify-between text-[10px] tracking-[0.18em] uppercase border-t border-white/5 pt-4">
+        <div class="font-bold text-brand">TOTAL PRIZE POOL: ${{ '{:,}'.format(total_prize_cap) }}</div>
+        <div class="text-slate-600 hidden md:block">POST. GROW. CASH OUT.</div>
+        <div class="text-slate-600">LIMITED SLOTS. FIRST SERVED.</div>
+      </div>
+    </div><!-- /relative z-10 -->
+
+    <!-- Grand Card Section Divider -->
+    <div class="border-t border-slate-800/60 mx-8"></div>
+
+    <!-- ── Wildcard Banner (conditional) ────────────────────── -->
+    {% if settings.get('wildcard_open') %}
+    <div id="pbWildcardPanel" class="mx-8 my-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border px-5 py-4"
+         style="border-color:#9fe822; background:rgba(159,232,34,0.04); animation: glow-pulse 2s ease-in-out infinite;">
+      <div>
+        <div class="text-sm font-bold text-white">⚡ WILDCARD WINDOW IS OPEN</div>
+        <div class="text-xs text-slate-400 mt-0.5">Non-cashed players can enter for a bonus</div>
+      </div>
+      <div id="pbWildcardTimer" class="font-bold text-sm font-mono text-brand" data-seconds="{{ wc_seconds }}">Loading...</div>
+      <a href="/payout-board/wildcard"
+         class="shrink-0 px-4 py-2 rounded-lg text-xs font-black tracking-widest uppercase text-black no-underline"
+         style="background:#9fe822;">ENTER NOW →</a>
+    </div>
+    {% else %}
+    <div id="pbWildcardPanel" style="display:none;"></div>
+    {% endif %}
+
+    <!-- ── Status Banner (conditional, display-only). Game-ended takes precedence. ──── -->
+    {% if game_locked %}
+    <div id="pbLockedBanner" class="mx-8 my-5 flex flex-wrap items-center gap-3 rounded-xl border px-5 py-4"
+         style="border-color:rgba(251,191,36,0.45); background:rgba(251,191,36,0.06);">
+      <div style="font-size:20px;">🏁</div>
+      <div>
+        <div class="text-sm font-bold" style="color:#fbbf24;">The game has ended</div>
+        <div class="text-xs text-slate-400 mt-0.5">Thanks for playing Jobsite Jackpot. New entries are closed and winners are being paid out via the payout provider.</div>
+      </div>
+    </div>
+    {% elif cashouts_locked %}
+    <div id="pbLockedBanner" class="mx-8 my-5 flex flex-wrap items-center gap-3 rounded-xl border px-5 py-4"
+         style="border-color:rgba(251,191,36,0.45); background:rgba(251,191,36,0.06);">
+      <div style="font-size:20px;">🔒</div>
+      <div>
+        <div class="text-sm font-bold" style="color:#fbbf24;">All cash prizes have been locked in</div>
+        <div class="text-xs text-slate-400 mt-0.5">The prize tiers are claimed. An open Entry Level spot and the Perfect Stripes mini-game are the last way onto the board.</div>
+      </div>
+    </div>
+    {% else %}
+    <div id="pbLockedBanner" style="display:none;"></div>
+    {% endif %}
+
+  </div><!-- /grand card -->
+</div>
+
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SECTION 3. CREATOR ACTIONS DESK                          ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+<div class="max-w-6xl mx-auto px-4 pb-6">
+  <div class="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-5 items-start">
+
+    <!-- ── LEFT: Workdesk ──────────────────────────────────── -->
+    <div id="pb-workdesk" class="rounded-3xl p-6 md:p-8 min-h-[460px]" style="background: #0f192e;">
+
+      <!-- RETURNING PLAYER. Always visible at top -->
+      <div class="mb-6 rounded-xl p-4" style="background:#080d1a; border:1px solid rgba(159,232,34,0.15);">
+        <div class="text-[9px] font-bold tracking-[0.2em] uppercase mb-1" style="color:#9fe822;">RETURNING PLAYER?</div>
+        <div class="text-xs text-slate-400 mb-3 leading-relaxed">Enter your Player Code to check your status, submit updated views, or go to your Decision Page.</div>
+        <div id="pb-returning-row" class="flex flex-row items-stretch gap-2" style="display:flex;">
+          <input id="pb-code-input" type="text" placeholder="JSJ-ABC1234" maxlength="12"
+                 class="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm font-mono tracking-widest uppercase text-white border border-white/15 focus:border-brand focus:outline-none transition-colors"
+                 style="background:#0f192e;">
+          <button onclick="pbCheckStatus()"
+                  class="shrink-0 whitespace-nowrap px-4 py-2.5 rounded-lg text-xs font-black tracking-widest uppercase text-black transition-opacity hover:opacity-90"
+                  style="background:#9fe822;">CHECK</button>
+        </div>
+        <div id="pb-status-result" class="pb-status-result mt-3" style="display:none;"></div>
+      </div>
+
+      <!-- New Player section. Hidden when user arrives via ?code= (already submitted) -->
+      <div id="pb-new-player-section">
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 mb-5">
+        <div class="flex-1 border-t" style="border-color:rgba(255,255,255,0.05);"></div>
+        <div class="text-[10px] text-slate-600 uppercase tracking-widest font-bold">NEW PLAYER</div>
+        <div class="flex-1 border-t" style="border-color:rgba(255,255,255,0.05);"></div>
+      </div>
+
+      <div class="text-[9px] font-bold tracking-[0.2em] uppercase text-slate-500 mb-1">GET IN THE GAME</div>
+      <div class="text-xl font-black mb-1">Submit Your Post</div>
+      <div class="text-xs text-slate-400 mb-4 leading-relaxed">First time? Fill in your post details below to get your Player Code and join the game.</div>
+
+      <!-- What makes a valid entry. Collapsed by default, tap/click to reveal -->
+      <details class="pb-reveal rounded-lg mb-4" style="background: rgba(159,232,34,0.05); border: 1px solid rgba(159,232,34,0.2);">
+        <summary class="px-4 py-2.5 cursor-pointer text-[11px] font-bold tracking-[0.12em] uppercase text-brand">
+          🎬 What makes a valid entry
+          <span class="pb-reveal-hint text-slate-500 font-normal normal-case tracking-normal">. Tap to see</span>
+        </summary>
+        <ul class="text-xs text-slate-300 leading-relaxed m-0 space-y-1 px-4 pb-3" style="list-style:none;">
+          <li>✅ Shout out <strong class="text-white">Toolforge</strong> + the <strong class="text-white">2026 Trades Creator Report</strong> (drop a real stat)</li>
+          <li>✅ Follow the creator brief. Tags, hashtags &amp; links</li>
+          <li>✅ One video, one platform, <strong class="text-white">~15–30s</strong></li>
+          <li>✅ Real, organic views only. No boosting, ads, or bots</li>
+          <li class="text-[11px] text-slate-500 pt-1">One entry &amp; one cash out per creator. <a href="/payout-board/terms" target="_blank" class="text-brand underline">Full rules ↗</a></li>
+        </ul>
+      </details>
+
+      <!-- Overtime hint banner -->
+      <div class="rounded-lg px-4 py-3 mb-5 flex items-center gap-3"
+           style="background: rgba(159,232,34,0.06); border: 1px solid rgba(159,232,34,0.15);">
+        <span style="font-size:18px;">🏎️</span>
+        <p class="text-xs text-slate-400 leading-relaxed m-0">
+          <strong style="color:#9fe822;">Go Overtime</strong> to unlock the mower mini-game
+          and earn a <strong style="color:#9fe822;">+${{ minigame_bonus }} bonus</strong>,
+          or <strong class="text-white">Cash Out</strong> to lock in your guaranteed prize.
+        </p>
+      </div>
+
+      <form id="pb-submit-form" class="flex flex-col gap-4" action="/payout-board/submit" method="POST" enctype="multipart/form-data">
+
+        <!-- Row: First + Last Name -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">First Name</label>
+            <input class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors"
+                   style="background:#080d1a;" type="text" name="first_name" required placeholder="Jordan">
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">Last Name</label>
+            <input class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors"
+                   style="background:#080d1a;" type="text" name="last_name" required placeholder="Smith">
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">Email Address</label>
+          <input class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors"
+                 style="background:#080d1a;" type="email" name="email" required placeholder="you@example.com">
+        </div>
+
+        <!-- Row: Social Handle + Platform -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">Social Handle</label>
+            <input class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors"
+                   style="background:#080d1a;" type="text" name="handle" placeholder="@yourhandle">
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">Platform</label>
+            <select class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors cursor-pointer appearance-none"
+                    style="background:#080d1a;" name="platform" required>
+              <option value="" disabled selected>Select platform</option>
+              <option value="TikTok">TikTok</option>
+              <option value="Instagram">Instagram</option>
+              <option value="YouTube Shorts">YouTube Shorts</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row: Post URL + View Count -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">Post URL</label>
+            <input class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors"
+                   style="background:#080d1a;" type="url" name="post_url" required placeholder="https://...">
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">View Count</label>
+            <input class="w-full rounded-lg px-3 py-2.5 text-sm text-white border border-white/10 focus:border-brand focus:outline-none transition-colors"
+                   style="background:#080d1a;" type="number" name="impressions" required min="1" placeholder="5000">
+            <div class="text-[10px] leading-relaxed" style="color:#475569;">
+              TikTok: Views/Plays &nbsp;·&nbsp; Instagram: Plays or Reach &nbsp;·&nbsp; YouTube: Views<br>
+              Use the public view count shown on your post.
+            </div>
+          </div>
+        </div>
+
+        <!-- Screenshot Upload -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-semibold tracking-widest uppercase text-slate-500">Screenshot of View Count</label>
+          <div class="text-[10px] leading-relaxed mb-1" style="color:#475569;">
+            Your screenshot is proof of your views for payout eligibility. You can start playing right away. It's reviewed later only if you Cash Out.
+          </div>
+          <div id="pb-upload-zone"
+               onclick="document.getElementById('pb-file-input').click()"
+               class="rounded-xl border-2 border-dashed border-white/15 p-6 text-center cursor-pointer transition-all hover:border-brand"
+               style="transition: border-color 0.2s, background 0.2s;">
+            <div class="text-3xl mb-2">📸</div>
+            <div class="text-sm text-slate-400"><strong class="text-white">Click to upload</strong> or drag and drop</div>
+            <div class="text-xs text-slate-500 mt-1">PNG, JPG, WEBP. Max 16 MB</div>
+            <div id="pb-upload-filename" class="text-xs mt-2 hidden" style="color:#9fe822;"></div>
+          </div>
+          <input type="file" id="pb-file-input" name="screenshot" accept="image/*" required style="display:none;">
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="pb-submit-btn"
+                class="w-full rounded-lg py-3.5 text-sm font-black tracking-widest uppercase text-black transition-opacity hover:opacity-90"
+                style="background:#9fe822;">
+          SUBMIT AND PLAY 🎮
+        </button>
+        <div class="text-[11px] text-slate-500 text-center mt-3 leading-relaxed">
+          By submitting, you confirm you have read and agree to the
+          <a href="/payout-board/terms" target="_blank" class="text-brand underline">Official Contest Rules</a>.
+          No purchase necessary. Void where prohibited.
+        </div>
+      </form><!-- /form -->
+
+      <!-- Returning Player Section -->
+      <div class="mt-5 pt-5 border-t border-white/5 text-center">
+        <span class="text-xs text-slate-600">Already submitted? Use the <strong class="text-slate-400">RETURNING PLAYER</strong> box above ↑</span>
+      </div>
+
+      </div><!-- /pb-new-player-section -->
+
+    </div><!-- /workdesk -->
+
+    <!-- ── RIGHT: Sidebar ──────────────────────────────────── -->
+    <div class="flex flex-col gap-4">
+
+      <!-- Leaderboard Widget -->
+      <div class="rounded-2xl p-5" style="background: #0f192e;">
+        <div class="flex justify-between items-center mb-4">
+          <span class="text-sm font-bold uppercase tracking-widest">Leaderboard</span>
+          <span class="text-xs font-bold uppercase tracking-widest" id="pbLeaderboardCount" style="color:#64748b;">{{ leaderboard | length }} Creator{% if leaderboard | length != 1 %}s{% endif %}</span>
+        </div>
+        {# leaderboard is built server-side by _build_leaderboard(subs). The SAME shape
+           and logic the 30s JS refresh uses, so the initial paint never flips. #}
+        {% if leaderboard %}
+          <div id="pbLeaderboardList" style="max-height:380px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          {% for sub in leaderboard[:12] %}
+          {% set is_cashed = (sub.cashed_out == 'Yes') %}
+          {% set is_overtime = (not is_cashed and (sub.has_played_minigame or sub.status == 'Overtime')) %}
+          {% set is_challenger = (not is_cashed and not is_overtime and sub.challenger_tier_name) %}
+          {% set is_active = (not is_cashed and not is_overtime and not is_challenger) %}
+          {% set bonus = sub.mower_bonus | default(0) | int %}
+          {% set tier_prize = sub.tier_prize | default(0) | int %}
+          {% set qualified = tier_prize > 0 %}
+          {% set tier = sub.tier_name if (sub.tier_name and sub.tier_name != 'None') else '' %}
+          {% set rank = loop.index %}
+          <div style="background:#0b1120; border:1px solid {% if is_cashed %}rgba(34,197,94,0.15){% elif is_overtime %}rgba(245,158,11,0.15){% elif is_challenger %}rgba(251,191,36,0.35){% else %}rgba(159,232,34,0.12){% endif %}; border-radius:12px; padding:12px 14px;">
+            <!-- Row 1: rank + alias + bonus badge -->
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+              <span style="font-size:10px; font-weight:700; color:#334155; min-width:20px;">#{{ rank }}</span>
+              <span style="font-size:13px; font-weight:800; color:#f1f5f9; flex:1;">{{ sub.alias }}</span>
+              {% if bonus > 0 %}
+                <span style="display:inline-flex; align-items:center; gap:3px; font-size:9px; font-weight:700; background:rgba(159,232,34,0.12); color:#9fe822; border-radius:5px; padding:2px 6px; white-space:nowrap;">🚜 +${{ bonus }}</span>
+              {% endif %}
+            </div>
+            <!-- Row 2: platform · views · tier -->
+            <div style="font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">
+              {{ sub.platform or 'Unknown' }}
+              · {{ '{:,}'.format((sub.impressions | default(0)) | int) }} views
+              {% if tier %}
+                · <span style="color:#64748b;">{{ tier }}</span>
+              {% endif %}
+            </div>
+            <!-- Row 3: status badge + cashout $ or riding -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              {% if is_cashed %}
+                <span style="font-size:9px; font-weight:800; letter-spacing:0.06em; background:rgba(34,197,94,0.15); color:#4ade80; border-radius:6px; padding:3px 8px; white-space:nowrap;">CASHED OUT</span>
+                <span style="font-size:14px; font-weight:900; color:#4ade80; white-space:nowrap;">${{ '{:,}'.format(tier_prize + bonus) }}</span>
+              {% elif is_overtime %}
+                <span style="font-size:9px; font-weight:800; letter-spacing:0.06em; background:rgba(245,158,11,0.15); color:#f59e0b; border-radius:6px; padding:3px 8px; white-space:nowrap;">⚡ OVERTIME</span>
+                <span style="font-size:12px; color:#64748b; font-style:italic;">Riding...</span>
+              {% elif is_challenger %}
+                <span style="font-size:9px; font-weight:800; letter-spacing:0.06em; background:rgba(251,191,36,0.14); color:#fbbf24; border-radius:6px; padding:3px 8px; white-space:nowrap;">🎯 CHALLENGER{% if sub.challenger_rank > 1 %} #{{ sub.challenger_rank }}{% endif %}</span>
+                <span style="font-size:11px; font-weight:700; color:#fbbf24; white-space:nowrap;">{% if sub.challenger_rank == 1 %}Next for {% endif %}{{ sub.challenger_tier_name }} ${{ '{:,}'.format(sub.challenger_prize) }}</span>
+              {% else %}
+                <span style="font-size:9px; font-weight:800; letter-spacing:0.06em; background:rgba(159,232,34,0.15); color:#9fe822; border-radius:6px; padding:3px 8px; white-space:nowrap;">ACTIVE</span>
+                {% if qualified %}<span style="font-size:9px; color:#334155;">→ Decision ready</span>{% endif %}
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          </div>
+        {% else %}
+          <div id="pbLeaderboardList" class="text-xs text-slate-500 text-center py-8">No players yet. Be the first!</div>
+        {% endif %}
+      </div><!-- /leaderboard -->
+
+      <!-- Live Activity Feed -->
+      <div class="rounded-2xl p-4" style="background: #0f192e;">
+        <div class="text-[9px] font-bold tracking-[0.22em] uppercase mb-3" style="color:#475569;">🔥 LIVE ACTIVITY</div>
+        <div id="pbActivityFeed" class="flex flex-col">
+          {% if activity_feed %}
+            {% for event in activity_feed %}
+            <div style="font-size:11px; padding:7px 0; line-height:1.4;
+                        {% if not loop.first %}border-top:1px solid rgba(255,255,255,0.04);{% endif %}
+                        color:{% if event.type == 'cashout' %}#4ade80{% elif event.type == 'bonus' %}#9fe822{% elif event.type == 'overtime' %}#f59e0b{% else %}#64748b{% endif %};">
+              {{ event.text }}
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="font-size:11px; color:#334155; text-align:center; padding:12px 0;">No activity yet. Be the first!</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Campaign Mechanics Accordion -->
+      <div class="rounded-2xl p-5" style="background: #0f192e;">
+        <!-- pb-accordion-btn must be DIRECT sibling of pb-accordion-body for refresh.js -->
+        <button class="pb-accordion-btn w-full flex justify-between items-center text-[10px] font-bold tracking-[0.2em] uppercase text-slate-500 hover:text-slate-300 transition-colors bg-transparent border-0 cursor-pointer py-0.5">
+          <span>How to Play</span>
+          <i class="fa-solid fa-chevron-down text-[10px] transition-transform"></i>
+        </button>
+        <div class="pb-accordion-body text-xs text-slate-400 leading-7 mt-3">
+          <ol class="list-decimal pl-4 space-y-0.5">
+            <li><strong class="text-white">Submit your post</strong>: fill in your views + screenshot and get a unique Player Code instantly</li>
+            <li><strong class="text-white">Check your tier</strong>: enter your Player Code above to see your current tier status right away. No waiting.</li>
+            <li><strong class="text-white">Cash Out</strong>: lock in your guaranteed tier prize and claim your spot (final once your video clears review).</li>
+            <li><strong class="text-white">Go Overtime</strong>: release your spot and play the mower mini-game for a +${{ minigame_bonus }} permanent bonus. You can still cash out from any open tier after.</li>
+            <li><strong class="text-white">Grow your views</strong>: submit updated views with your Player Code to unlock higher tiers and bigger prizes.</li>
+            <li><strong class="text-white">Payouts</strong>: once admin confirms your screenshot, your prize is paid via the payout provider on the next pay cycle.</li>
+          </ol>
+          <div class="mt-4 pt-3 border-t border-white/5">
+            <div class="text-[9px] font-bold tracking-[0.2em] uppercase text-slate-500 mb-2">The Ground Rules</div>
+            <ul class="list-disc pl-4 space-y-1">
+              <li><strong class="text-white">One entry per creator</strong>: one video, on one platform, one Player Code, one prize. You can repost elsewhere for reach, but only the platform you submit counts.</li>
+              <li>Your video must <strong class="text-white">mention Toolforge</strong> and the <strong class="text-white">2026 Trades Creator Report</strong>, include at least one stat from it, and follow the creator brief (required tags, hashtags, links). Target length <strong class="text-white">15–30 seconds</strong>.</li>
+              <li>Only <strong class="text-white">real, organic views</strong> count. No paid boosting/ads, bots, or bought views. We may audit suspicious engagement.</li>
+              <li>You can <strong class="text-white">Cash Out only once</strong>: it locks your prize and ends your run. Go Overtime keeps you playing for a higher tier.</li>
+              <li>Full details in the <a href="/payout-board/terms" target="_blank" class="text-brand underline">Official Contest Rules</a>.</li>
+            </ul>
+            <div style="background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:12px 14px; margin-top:12px;">
+              <div class="text-[10px] font-bold tracking-[0.15em] uppercase mb-1" style="color:#fbbf24;">🎯 Challengers are circling</div>
+              <div class="text-xs text-slate-300 leading-relaxed">
+                A cashed-out spot <strong class="text-white">isn't locked until the video clears review</strong>. Break a ground rule (miss a tag, inflate the views, wrong length) and the <strong style="color:#fbbf24;">highest-view Challenger next in line swoops in and takes the spot</strong>, and the cash. Play clean, or someone hungrier takes your bag.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /accordion -->
+
+    </div><!-- /sidebar -->
+
+  </div><!-- /creator desk grid -->
+</div>
+
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SECTION 4. CONFIRMED PAYOUTS                              ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+{# Include any BP where cashed_out=Yes OR payout=Paid (handles legacy records) #}
+{% set paid_subs = subs | selectattr('cashed_out', 'equalto', 'Yes') | list %}
+{% for s in subs %}{% if s.payout == 'Paid' and s.cashed_out != 'Yes' and s not in paid_subs %}{% set _ = paid_subs.append(s) %}{% endif %}{% endfor %}
+{% if paid_subs %}
+<div class="max-w-6xl mx-auto px-4 pb-10">
+  <div class="rounded-2xl p-6" style="background: #0f192e;">
+    <div class="flex justify-between items-center mb-5">
+      <div class="text-[11px] font-bold tracking-[0.2em] uppercase text-slate-500">✅ CONFIRMED PAYOUTS</div>
+      <div id="pbCashoutCount" class="text-xs font-bold tracking-widest" style="color:#9fe822;">{{ paid_subs | length }} CONFIRMED</div>
+    </div>
+    <div id="pbCashoutBody">
+      {% for sub in paid_subs %}
+      <div class="pb-cashout-row flex items-center gap-4 py-3 border-t border-white/5">
+        <div class="pb-cashout-alias text-sm font-bold flex-1" style="color:#9fe822;">{{ sub.alias }}</div>
+        <div class="pb-cashout-tier-pill text-xs text-slate-400">{{ sub.cash_out_tier }}</div>
+        <div class="text-xs text-slate-500 hidden md:block">{{ sub.platform }}</div>
+        <div class="pb-cashout-prize text-sm font-black">
+          {% for t in prize_tiers %}{% if t.name == sub.cash_out_tier %}${{ t.prize }}{% endif %}{% endfor %}{% if sub.mower_bonus > 0 %} + ${{ sub.mower_bonus }}{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% else %}
+<!-- Hidden anchors for refresh.js when no payouts exist yet -->
+<div style="display:none;">
+  <div id="pbCashoutBody"></div>
+  <div id="pbCashoutCount"></div>
+</div>
+{% endif %}
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SECTION 5. GO OVERTIME CALLOUT                            ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+<div class="max-w-6xl mx-auto px-4 pb-6">
+  <div class="rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center"
+       style="background: linear-gradient(135deg, #0a1a0a 0%, #0d1a0d 100%); border: 1px solid rgba(159,232,34,0.2); animation: glow-pulse 3s ease-in-out infinite;">
+    <!-- Icon + Label -->
+    <div class="text-4xl shrink-0">🏎️</div>
+    <div class="flex-1">
+      <div class="text-[10px] font-bold tracking-[0.25em] uppercase text-slate-500 mb-1">BONUS MODE</div>
+      <div class="text-lg font-black text-white mb-1">Go Overtime. Unlock <span style="color:#9fe822;">Perfect Stripes</span></div>
+      <p class="text-sm text-slate-400 leading-relaxed">
+        Once you qualify for a cash tier, you have a choice: <strong class="text-white">Cash Out</strong> and lock in your prize,
+        or <strong style="color:#9fe822;">Go Overtime</strong> to release your spot back into the pool and chase a bigger tier.
+        Going Overtime unlocks <strong style="color:#9fe822;">Perfect Stripes</strong>, the mower mini-game where you can earn an additional
+        <strong style="color:#9fe822;">+${{ minigame_bonus }} bonus</strong> on top of your payout. High risk, high reward.
+      </p>
+    </div>
+    <div class="shrink-0 text-center">
+      <div class="text-[10px] tracking-widest uppercase text-slate-500 mb-1">Bonus Prize</div>
+      <div class="font-black text-2xl" style="color:#9fe822;">+${{ minigame_bonus }}</div>
+      <div class="text-[10px] text-slate-500 mt-0.5">if you win</div>
+    </div>
+  </div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SECTION 6. THE LIVE BOARD (standalone card at bottom)     ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+<div class="max-w-6xl mx-auto px-4 pb-10">
+  <div class="rounded-2xl border p-6" style="border-color: rgba(159,232,34,0.25); background: #0f192e;">
+    <div class="flex items-center justify-between mb-5">
+      <div class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-500">⚡ THE LIVE BOARD</div>
+      <div class="inline-flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full" style="background:#9fe822; animation: pulse-dot 2s ease-in-out infinite;"></span>
+        <span class="text-[9px] font-semibold tracking-widest uppercase text-slate-500">UPDATES EVERY 30s</span>
+      </div>
+    </div>
+    <!-- Board grid. Data-tier attribute is required by refresh.js for dot updates -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="pb-board-grid">
+      {% for tier in prize_tiers %}
+        {% set claimed = spots_claimed.get(tier.name, 0) %}
+        {% set remaining = [tier.cap - claimed, 0] | max %}
+        {% set is_ds = tier.name == 'Double Shift' %}
+        {% set ds_players = subs | selectattr('cash_out_tier', 'equalto', tier.name) | selectattr('cashed_out', 'equalto', 'No') | rejectattr('status', 'equalto', 'Disqualified') | list %}
+        <div class="rounded-xl p-4 flex flex-col gap-3 border transition-colors
+                    {% if remaining == 0 %}border-red-900/40 closed{% elif is_ds and ds_players %}border-brand/60 open{% else %}border-slate-700/40 open{% endif %}"
+             style="background: #090e1a;"
+             data-tier="{{ tier.name }}">
+
+          <!-- Status badge. Updated by refresh.js via .pb-tier-badge + .pb-tier-spots-label -->
+          {% if remaining == 0 %}
+            <span class="pb-tier-badge closed-badge self-start text-[9px] font-bold px-2.5 py-0.5 rounded-full tracking-widest"
+                  style="background:rgba(239,68,68,0.12); color:#f87171;">⛔ TIER FULL</span>
+          {% elif tier.locked %}
+            <span class="pb-tier-badge self-start text-[9px] font-bold px-2.5 py-0.5 rounded-full tracking-widest"
+                  style="background:rgba(245,158,11,0.12); color:#fbbf24;">🔒 LOCKED</span>
+          {% elif is_ds and ds_players %}
+            <span class="pb-tier-badge open self-start text-[9px] font-bold px-2.5 py-0.5 rounded-full tracking-widest"
+                  style="background:rgba(159,232,34,0.1); color:#9fe822;"><span class="blink">●</span> PLAYING NOW</span>
+          {% else %}
+            <span class="pb-tier-badge open self-start text-[9px] font-bold px-2.5 py-0.5 rounded-full tracking-widest pb-tier-spots-label"
+                  style="background:rgba(159,232,34,0.1); color:{% if remaining == 1 %}#f87171{% elif remaining == 2 %}#fbbf24{% else %}#9fe822{% endif %};">
+              {% if remaining == 1 %}🔥 LAST SPOT{% elif remaining == 2 %}⚡ 2 SPOTS LEFT{% else %}{{ remaining }} SPOTS LEFT{% endif %}
+            </span>
+          {% endif %}
+
+          <!-- Tier name + Prize -->
+          <div>
+            <div class="text-[10px] tracking-widest uppercase text-slate-500 mb-1">{{ tier.name }}</div>
+            <div class="font-black leading-none text-brand" style="font-size: clamp(22px, 3vw, 30px);">${{ '{:,}'.format(tier.prize) }}</div>
+          </div>
+
+          <!-- Separator -->
+          <div class="border-t border-slate-700/40"></div>
+
+          <!-- Dots. Re-rendered by refresh.js via .pb-spot-dots -->
+          <div class="flex flex-wrap gap-1.5 pb-spot-dots">
+            {% for i in range(tier.cap) %}
+              <div class="pb-dot {% if i < claimed %}claimed{% else %}available{% endif %}"></div>
+            {% endfor %}
+          </div>
+          <!-- Claimed count. Updated by refresh.js applyTierData -->
+          <div class="pb-tier-claimed-label text-center mt-0.5" style="font-size:10px; color:#334155;">
+            {{ claimed }}/{{ tier.cap }} claimed
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+      <!-- Prize Pool Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 pt-4 border-t border-white/5">
+        <div class="text-center">
+          <div class="text-[9px] tracking-widest uppercase mb-1" style="color:#334155;">💰 Total Pool</div>
+          <div class="text-sm font-black text-white">${{ '{:,}'.format(prize_pool_stats.total) }}</div>
+        </div>
+        <div class="text-center">
+          <div class="text-[9px] tracking-widest uppercase mb-1" style="color:#334155;">🔒 Locked In</div>
+          <div class="text-sm font-black text-brand" id="pbLockedIn">${{ '{:,}'.format(prize_pool_stats.locked_in) }}</div>
+        </div>
+        <div class="text-center">
+          <div class="text-[9px] tracking-widest uppercase mb-1" style="color:#334155;">🎯 Remaining</div>
+          <div class="text-sm font-black text-white" id="pbRemaining">${{ '{:,}'.format(prize_pool_stats.remaining) }}</div>
+        </div>
+        <div class="text-center">
+          <div class="text-[9px] tracking-widest uppercase mb-1" style="color:#334155;">🏦 Bonus Bank</div>
+          <div class="text-sm font-black" style="color:#f59e0b;" id="pbBonusTotal">${{ '{:,}'.format(prize_pool_stats.bonus_awarded) }}</div>
+        </div>
+      </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="max-w-6xl mx-auto px-4 pb-10 pt-2 text-center">
+  <div class="text-[11px] text-slate-500 leading-relaxed">
+    <a href="/payout-board/terms" class="text-slate-400 hover:text-brand underline">Terms &amp; Conditions</a>
+    <span class="mx-2 text-slate-700">·</span>
+    <a href="https://toolforge.example/privacy-policy" target="_blank" rel="noopener" class="text-slate-400 hover:text-brand underline">Privacy Policy</a>
+  </div>
+  <div class="text-[10px] text-slate-600 mt-2">
+    Sponsored by Toolforge Inc.. No purchase necessary. Void where prohibited.
+  </div>
+</footer>
+
+<!-- Padding at bottom -->
+<div class="h-8"></div>
+
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  FLOATING UI + HIDDEN HELPERS                               ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+
+<!-- Mute Button. PbInitMuteBtn looks for id="pbMuteBtn" -->
+<button id="pbMuteBtn" title="Toggle sound"
+        class="pb-mute-btn fixed bottom-6 left-6 w-10 h-10 rounded-full flex items-center justify-center text-base cursor-pointer z-50 transition-colors"
+        style="background:#0f192e; border: 1px solid rgba(159,232,34,0.2);">
+  🔊
+</button>
+
+
+<!-- ╔═══════════════════════════════════════════════════════════════╗
+     ║  SCRIPTS                                                    ║
+     ╚═══════════════════════════════════════════════════════════════╝ -->
+<script src="{{ url_for('static', filename='js/payout_board_sounds.js') }}"></script>
+<script src="{{ url_for('static', filename='js/payout_board_refresh.js') }}"></script>
+<script src="{{ url_for('static', filename='js/payout_board_cashout.js') }}"></script>
+
+<script>
+(function () {
+  /* ── File upload drag-and-drop ──────────────────────────── */
+  const zone  = document.getElementById('pb-upload-zone');
+  const inp   = document.getElementById('pb-file-input');
+  const fnEl  = document.getElementById('pb-upload-filename');
+
+  function showFile(file) {
+    fnEl.textContent = '✅ ' + file.name;
+    fnEl.classList.remove('hidden');
+    zone.style.borderColor = '#9fe822';
+    zone.style.background  = 'rgba(159,232,34,0.04)';
+  }
+  if (inp)  inp.addEventListener('change', () => { if (inp.files[0]) showFile(inp.files[0]); });
+  if (zone) {
+    ['dragover', 'dragenter'].forEach(ev => zone.addEventListener(ev, e => {
+      e.preventDefault(); zone.style.borderColor = '#9fe822';
+    }));
+    ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+      e.preventDefault(); zone.style.borderColor = '';
+      if (ev === 'drop' && e.dataTransfer.files[0]) {
+        inp.files = e.dataTransfer.files;
+        showFile(e.dataTransfer.files[0]);
+      }
+    }));
+  }
+
+  /* ── Returning player toggle ────────────────────────────── */
+  window.pbToggleReturning = function () {
+    const row = document.getElementById('pb-returning-row');
+    if (!row) return;
+    if (row.style.display === 'none' || row.style.display === '') {
+      row.style.display = 'flex';
+      const ci = document.getElementById('pb-code-input');
+      if (ci) ci.focus();
+    } else {
+      row.style.display = 'none';
+    }
+  };
+
+  /* ── Auto-check returning player from URL ?code= param ───── */
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const urlCode = params.get('code');
+    if (!urlCode) return;
+
+    // Pre-fill Player Code input
+    const ci = document.getElementById('pb-code-input');
+    if (ci) ci.value = urlCode.toUpperCase();
+
+    // Hide the new-player form so it doesn't look like a second submission form
+    const newPlayerSection = document.getElementById('pb-new-player-section');
+    if (newPlayerSection) newPlayerSection.style.display = 'none';
+
+    // Auto-trigger status check (cashout.js defines pbCheckStatus on window)
+    function tryCheck() {
+      if (typeof window.pbCheckStatus === 'function') {
+        window.pbCheckStatus();
+      }
+    }
+    // Scripts load synchronously above, so pbCheckStatus should already be defined
+    tryCheck();
+
+    // Clean URL so page refresh doesn't re-trigger (no reload needed)
+    params.delete('code');
+    const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', cleanUrl);
+  })();
+
+  /* ── Global board data for refresh.js ───────────────────── */
+  window.PB_BOARD_DATA = {{ board_data | tojson }};
+  window.PB_CLOSE_DATE = {{ (settings.get('close_date') or 'null') | tojson }};
+  window.PB_WC_CLOSE   = {{ (settings.get('wc_close_time') or 'null') | tojson }};
+})();
+</script>
+
+</body>
+</html>

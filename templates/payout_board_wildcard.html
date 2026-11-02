@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wildcard Window. Toolforge Consumer Report Campaign</title>
+  <link rel="stylesheet" href="/static/css/payout_board.css">
+  <style>
+    .pb-wc-wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 0 16px 64px;
+    }
+    .pb-wc-card {
+      background: var(--pb-card);
+      border: 1px solid var(--pb-border);
+      border-radius: 8px;
+      padding: 32px;
+    }
+    .pb-wc-header { text-align: center; margin-bottom: 28px; }
+    .pb-wc-bolt { font-size: 40px; display: block; margin-bottom: 10px; }
+    .pb-wc-title {
+      font-family: var(--pb-font);
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--pb-green);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .pb-wc-sub {
+      font-size: 13px;
+      color: var(--pb-muted);
+      line-height: 1.6;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .pb-wc-timer-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin: 20px 0 24px;
+      align-items: center;
+    }
+    .pb-wc-timer-unit { text-align: center; }
+    .pb-wc-timer-num {
+      font-family: var(--pb-font);
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--pb-green);
+      letter-spacing: 2px;
+      display: block;
+      line-height: 1;
+    }
+    .pb-wc-timer-label {
+      font-size: 10px;
+      color: var(--pb-muted);
+      font-family: var(--pb-font);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .pb-wc-timer-sep {
+      font-family: var(--pb-font);
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--pb-border-hi);
+      line-height: 1;
+      padding-bottom: 14px;
+    }
+    .pb-wc-spots {
+      text-align: center;
+      font-size: 13px;
+      color: var(--pb-muted);
+      margin-bottom: 24px;
+    }
+    .pb-wc-spots strong { color: var(--pb-green); }
+    .pb-label {
+      display: block;
+      font-family: var(--pb-font);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--pb-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .pb-input {
+      width: 100%;
+      background: var(--pb-bg-dark);
+      border: 1px solid var(--pb-border-hi);
+      border-radius: 4px;
+      color: var(--pb-white);
+      font-size: 14px;
+      padding: 10px 12px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .pb-input:focus { outline: none; border-color: var(--pb-green); }
+    .pb-input.error { border-color: #ff5252; }
+    .pb-input::placeholder { color: var(--pb-muted); }
+    .pb-field-group { margin-bottom: 18px; }
+    .pb-field-error { color: #ff5252; font-size: 12px; margin-top: 4px; }
+    .pb-error-banner {
+      background: rgba(229,57,53,0.1);
+      border: 1px solid rgba(229,57,53,0.4);
+      border-radius: 4px;
+      color: #ff8a80;
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+    }
+    .pb-wc-submit-btn {
+      width: 100%;
+      background: var(--pb-green);
+      color: #000;
+      font-family: var(--pb-font);
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      padding: 16px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .pb-wc-submit-btn:hover { background: #6BB300; transform: translateY(-1px); }
+    .pb-wc-submit-btn:active { transform: translateY(0); }
+    .pb-fine-print { font-size: 11px; color: var(--pb-muted); margin-top: 14px; line-height: 1.5; text-align: center; }
+
+    /* Confirmed */
+    .pb-wc-confirmed { text-align: center; padding: 40px 24px; }
+    .pb-wc-confirmed-icon { font-size: 52px; display: block; margin-bottom: 16px; }
+    .pb-wc-confirmed-title {
+      font-family: var(--pb-font);
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--pb-green);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .pb-wc-confirmed-sub {
+      font-size: 14px;
+      color: var(--pb-muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+      max-width: 380px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .pb-wc-alias-box {
+      display: inline-block;
+      background: rgba(232,197,71,0.08);
+      border: 1px solid #E8C547;
+      border-radius: 6px;
+      padding: 14px 28px;
+      margin-bottom: 24px;
+    }
+    .pb-wc-alias-label {
+      font-size: 11px;
+      font-family: var(--pb-font);
+      letter-spacing: 2px;
+      color: var(--pb-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .pb-wc-alias-value {
+      font-family: var(--pb-font);
+      font-size: 22px;
+      font-weight: 900;
+      color: #E8C547;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .pb-wc-prize-note {
+      background: rgba(91,156,0,0.05);
+      border: 1px solid var(--pb-border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 13px;
+      color: var(--pb-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .pb-wc-prize-note strong { color: var(--pb-green); }
+
+    @media (max-width: 480px) {
+      .pb-wc-card { padding: 20px 16px; }
+      .pb-wc-confirmed { padding: 28px 12px; }
+      .pb-wc-timer-num { font-size: 24px; }
+    }
+  </style>
+</head>
+<body class="pb-body">
+
+<!-- Compact header -->
+<div style="padding: 20px 16px 0;">
+  <div style="text-align:center; margin-bottom: 20px;">
+    <div style="display:inline-flex; align-items:center; gap:10px;">
+      <div class="pb-live-indicator">
+        <div class="pb-live-dot"></div>
+        <span class="pb-live-label">LIVE</span>
+      </div>
+      <div>
+        <div style="font-family:var(--pb-font);font-size:11px;letter-spacing:2px;color:var(--pb-muted);text-transform:uppercase;">TOOLFORGE PRESENTS</div>
+        <div style="font-family:var(--pb-font);font-size:20px;font-weight:900;letter-spacing:3px;color:var(--pb-white);text-transform:uppercase;line-height:1;">JOBSITE JACKPOT</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pb-wc-wrap">
+
+  {% if confirmed %}
+  <!-- Confirmed -->
+  <div class="pb-wc-card pb-wc-confirmed">
+    <span class="pb-wc-confirmed-icon">⚡</span>
+    <div class="pb-wc-confirmed-title">You're In the Wildcard</div>
+    <div class="pb-wc-confirmed-sub">
+      Your entry has been received. If you're one of the first {{ wildcard_cap }} valid entries, you win $50.
+    </div>
+    <div class="pb-wc-alias-box">
+      <div class="pb-wc-alias-label">Your Board Alias</div>
+      <div class="pb-wc-alias-value">{{ alias }}</div>
+    </div>
+    <div class="pb-wc-prize-note">
+      <strong>What happens next:</strong><br>
+      The first {{ wildcard_cap }} valid wildcard entries win <strong>$50</strong> each.
+      If you qualify, your payout will be processed via the payout provider in the next pay period.
+    </div>
+    <a href="/payout-board/live" class="pb-cta-btn" style="display:inline-block;">WATCH THE BOARD</a>
+  </div>
+
+  {% else %}
+
+  {% if errors.general %}
+  <div class="pb-error-banner">{{ errors.general }}</div>
+  {% endif %}
+
+  <div class="pb-wc-card">
+    <div class="pb-wc-header">
+      <span class="pb-wc-bolt">⚡</span>
+      <div class="pb-wc-title">Last Chance. Wildcard</div>
+      <div class="pb-wc-sub">
+        Didn't cash out? You still have a shot. Submit your email for a chance at <strong style="color:var(--pb-green);">$50</strong>.
+        First {{ wildcard_cap }} valid entries win.
+      </div>
+    </div>
+
+    {% if wc_seconds and wc_seconds > 0 %}
+    {% set h = (wc_seconds // 3600) %}
+    {% set m = ((wc_seconds % 3600) // 60) %}
+    {% set s = (wc_seconds % 60) %}
+    <div class="pb-wc-timer-wrap">
+      <div class="pb-wc-timer-unit">
+        <span class="pb-wc-timer-num" id="wcH">{{ '%02d'|format(h) }}</span>
+        <div class="pb-wc-timer-label">Hours</div>
+      </div>
+      <div class="pb-wc-timer-sep">:</div>
+      <div class="pb-wc-timer-unit">
+        <span class="pb-wc-timer-num" id="wcM">{{ '%02d'|format(m) }}</span>
+        <div class="pb-wc-timer-label">Mins</div>
+      </div>
+      <div class="pb-wc-timer-sep">:</div>
+      <div class="pb-wc-timer-unit">
+        <span class="pb-wc-timer-num" id="wcS">{{ '%02d'|format(s) }}</span>
+        <div class="pb-wc-timer-label">Secs</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="pb-wc-spots">Spots remaining: <strong id="wcSpotsLeft">{{ wildcard_cap }}</strong> of {{ wildcard_cap }}</div>
+
+    <form method="POST" action="/payout-board/wildcard">
+      <div class="pb-field-group">
+        <label class="pb-label" for="wc_email">Your Email Address</label>
+        <input class="pb-input {% if errors.email %}error{% endif %}"
+               type="email" id="wc_email" name="email"
+               value="{{ form_data.get('email', '') }}"
+               autocomplete="email" required placeholder="your@email.com">
+        {% if errors.email %}<div class="pb-field-error">{{ errors.email }}</div>{% endif %}
+      </div>
+      <button type="submit" class="pb-wc-submit-btn">ENTER THE WILDCARD</button>
+      <div class="pb-fine-print">
+        Only BPs who submitted a post and did not cash out are eligible. One entry per BP. $50 prize paid via the payout provider.
+      </div>
+    </form>
+  </div>
+
+  {% endif %}
+
+  <div style="text-align:center;margin-top:24px;">
+    <a href="/payout-board/live" style="font-size:13px;color:var(--pb-muted);text-decoration:none;font-family:var(--pb-font);font-weight:700;letter-spacing:1px;text-transform:uppercase;">← BACK TO THE BOARD</a>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    let remaining = {{ wc_seconds | default(0) | int }};
+    const hEl = document.getElementById('wcH');
+    const mEl = document.getElementById('wcM');
+    const sEl = document.getElementById('wcS');
+    if (!hEl || remaining <= 0) return;
+    function tick() {
+      if (remaining <= 0) { hEl.textContent = mEl.textContent = sEl.textContent = '00'; return; }
+      hEl.textContent = String(Math.floor(remaining / 3600)).padStart(2, '0');
+      mEl.textContent = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0');
+      sEl.textContent = String(remaining % 60).padStart(2, '0');
+      remaining--;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+
+</body>
+</html>

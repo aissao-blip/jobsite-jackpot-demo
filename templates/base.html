@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Jobsite Jackpot{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/payout_board.css') }}">
+  <style>
+    :root { --jj-green:#9fe822; --jj-bg:#060b16; --jj-panel:#0b1220; --jj-border:#1e293b; --jj-text:#e2e8f0; --jj-muted:#64748b; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--jj-bg); color:var(--jj-text);
+           font-family:'Inter',system-ui,-apple-system,sans-serif; }
+    .jj-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px;
+                 padding:14px 22px; border-bottom:1px solid var(--jj-border);
+                 background:linear-gradient(180deg,#0a1324,#070d18); position:sticky; top:0; z-index:50; }
+    .jj-topbar .brand { font-weight:900; letter-spacing:2px; text-transform:uppercase; font-size:13px; }
+    .jj-topbar .brand b { color:var(--jj-green); }
+    .jj-topbar .page { font-size:12px; color:var(--jj-muted); text-transform:uppercase; letter-spacing:1.5px; }
+    .jj-topbar a { color:var(--jj-muted); text-decoration:none; font-size:12px; font-weight:600; }
+    .jj-topbar a:hover { color:var(--jj-green); }
+    .jj-demo-ribbon { background:rgba(159,232,34,0.08); color:var(--jj-green); text-align:center;
+                      font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+                      padding:5px; border-bottom:1px solid rgba(159,232,34,0.2); }
+    .jj-wrap { max-width:1200px; margin:0 auto; padding:22px; }
+    {% block extra_head %}{% endblock %}
+  </style>
+</head>
+<body>
+  <div class="jj-demo-ribbon">Portfolio Demo &middot; Fictional data &middot; No real emails or payments are sent</div>
+  <div class="jj-topbar">
+    <span class="brand">JOBSITE <b>JACKPOT</b></span>
+    <span class="page">{% block page_title %}Admin{% endblock %}</span>
+    <span>
+      <a href="/payout-board/live" target="_blank">Live Board ↗</a>
+      &nbsp;&nbsp;<a href="/demo/reset" onclick="return confirm('Reset the demo to fresh fictional data?')">Reset demo</a>
+    </span>
+  </div>
+  <div class="jj-wrap">
+    {% block content %}{% endblock %}
+  </div>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

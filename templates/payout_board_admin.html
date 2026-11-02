@@ -1,0 +1,1512 @@
+{% extends "base.html" %}
+{% block title %}Jobsite Jackpot — Admin{% endblock %}
+{% block page_title %}Jobsite Jackpot — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Admin shell ──────────────────────────────────────────── */
+  .jj-admin { max-width:1280px; font-family:'Inter',system-ui,sans-serif; }
+
+  /* Status bar */
+  .jj-status-bar {
+    display:flex; align-items:center; gap:10px;
+    background:#0b1120; border:1px solid #1e293b; border-radius:8px;
+    padding:10px 16px; margin-bottom:20px; font-size:12px;
+  }
+  .jj-status-dot { width:8px; height:8px; border-radius:50%; background:#22c55e;
+    animation:pulse-dot 2s ease-in-out infinite; flex-shrink:0; }
+  .jj-status-label { color:#64748b; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+  .jj-status-value { color:#e2e8f0; }
+  .jj-status-value.green { color:#22c55e; font-weight:700; }
+  .jj-status-value.yellow { color:#f59e0b; font-weight:700; }
+  .jj-status-value.red { color:#ef4444; font-weight:700; }
+
+  /* Metric cards */
+  .jj-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+  @media(max-width:900px){ .jj-metrics { grid-template-columns:repeat(2,1fr); } }
+  .jj-metric {
+    background:#0b1120; border:1px solid #1e293b; border-radius:12px; padding:18px 20px;
+  }
+  .jj-metric-label { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+    color:#475569; margin-bottom:10px; }
+  .jj-metric-val { font-size:32px; font-weight:900; color:#f1f5f9; line-height:1; margin-bottom:4px; }
+  .jj-metric-val.green { color:#22c55e; }
+  .jj-metric-val.yellow { color:#f59e0b; }
+  .jj-metric-sub { font-size:11px; color:#475569; }
+  .jj-metric-sub.live { color:#22c55e; display:flex; align-items:center; gap:4px; }
+
+  /* Main 2-col layout */
+  .jj-main { display:grid; grid-template-columns:2fr 1fr; gap:18px; margin-bottom:20px; }
+  @media(max-width:1024px){ .jj-main { grid-template-columns:1fr; } }
+  .jj-left  { display:flex; flex-direction:column; gap:18px; }
+  .jj-right { display:flex; flex-direction:column; gap:18px; }
+
+  /* Panel card */
+  .jj-panel {
+    background:#0b1120; border:1px solid #1e293b; border-radius:12px; overflow:hidden;
+  }
+  .jj-panel-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; border-bottom:1px solid #1e293b;
+  }
+  .jj-panel-title {
+    font-size:11px; font-weight:900; letter-spacing:2.5px; text-transform:uppercase; color:#e2e8f0;
+    font-family:'Courier New',monospace;
+  }
+  .jj-panel-sub { font-size:11px; color:#475569; padding:6px 20px 14px; }
+  .jj-pill {
+    font-size:10px; font-weight:700; letter-spacing:1px; padding:3px 10px; border-radius:20px;
+  }
+  .jj-pill-green { background:rgba(34,197,94,.12); color:#22c55e; border:1px solid rgba(34,197,94,.25); }
+  .jj-pill-yellow { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+  .jj-pill-red { background:rgba(239,68,68,.12); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+  .jj-pill-blue { background:rgba(99,102,241,.12); color:#818cf8; border:1px solid rgba(99,102,241,.3); }
+  .jj-pill-muted { background:rgba(100,116,139,.12); color:#64748b; border:1px solid rgba(100,116,139,.25); }
+
+  /* Audit / Registry tables */
+  .jj-table { width:100%; border-collapse:collapse; }
+  .jj-table th {
+    padding:8px 14px; text-align:left; font-size:9px; font-weight:700;
+    letter-spacing:1.5px; text-transform:uppercase; color:#475569;
+    border-bottom:1px solid #1e293b;
+  }
+  .jj-table td { padding:11px 14px; font-size:12px; color:#cbd5e1; border-bottom:1px solid #0f172a; vertical-align:middle; background:#0b1120; }
+  .jj-table tr:last-child td { border-bottom:none; }
+  .jj-table tr:hover td { background:#0b1120; }
+  .jj-table tbody tr { background:#0b1120; }
+  .jj-table tbody tr:hover { background:#0b1120; }
+  .jj-table .alias-cell { color:#fbbf24; font-weight:700; font-size:11px; letter-spacing:1px; text-transform:uppercase; }
+  .jj-table .code-cell { font-family:'Courier New',monospace; color:#9fe822; font-size:11px; letter-spacing:1.5px; }
+  .jj-table .tier-cell { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+  .jj-table .mower-cell { color:#f59e0b; font-weight:700; }
+
+  /* Action buttons */
+  .jj-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 10px;
+    border-radius:5px; border:none; font-size:10px; font-weight:700;
+    letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:opacity .15s; }
+  .jj-btn:hover { opacity:.8; }
+  .jj-btn-green { background:rgba(34,197,94,.18); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
+  .jj-btn-red { background:rgba(239,68,68,.18); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+  .jj-btn-yellow { background:rgba(245,158,11,.18); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+  .jj-btn-blue { background:rgba(99,102,241,.18); color:#818cf8; border:1px solid rgba(99,102,241,.3); }
+  .jj-btn-muted { background:rgba(100,116,139,.12); color:#94a3b8; border:1px solid rgba(100,116,139,.25); }
+  .jj-btn-brand { background:#9fe822; color:#000; font-weight:900; border:none; padding:12px 18px; border-radius:8px; font-size:12px; width:100%; justify-content:center; }
+  .jj-btn-brand:hover { background:#b5f033; opacity:1; }
+
+  /* Spot Allocation */
+  .jj-tier-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px; border-bottom:1px solid #0f172a;
+  }
+  .jj-tier-row:last-child { border-bottom:none; }
+  .jj-tier-name { font-size:12px; font-weight:700; color:#e2e8f0; }
+  .jj-tier-claimed { font-size:10px; color:#475569; margin-top:2px; }
+  .jj-cap-group { display:flex; align-items:center; gap:8px; }
+  .jj-cap-label { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:1px; }
+  .jj-cap-input {
+    width:52px; padding:4px 8px; background:#060b16; border:1px solid #1e293b;
+    color:#9fe822; font-size:13px; font-weight:700; border-radius:5px; text-align:center;
+    outline:none; font-family:'Courier New',monospace;
+  }
+  .jj-cap-input:focus { border-color:#9fe822; }
+  .jj-cap-save { padding:4px 10px; background:rgba(159,232,34,.15); color:#9fe822;
+    border:1px solid rgba(159,232,34,.3); border-radius:4px; font-size:10px;
+    font-weight:700; cursor:pointer; letter-spacing:1px; }
+  .jj-cap-save:hover { background:rgba(159,232,34,.25); }
+
+  /* Fraud radar */
+  .jj-fraud-row { padding:12px 20px; border-bottom:1px solid #0f172a; }
+  .jj-fraud-row:last-child { border-bottom:none; }
+  .jj-fraud-alias { color:#fbbf24; font-size:11px; font-weight:700; letter-spacing:1px; }
+  .jj-fraud-reason { font-size:10px; color:#ef4444; margin-top:2px; }
+
+  /* Quick actions bar */
+  .jj-actions-bar {
+    background:#0b1120; border:1px solid #1e293b; border-radius:12px;
+    padding:16px 20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    margin-bottom:20px;
+  }
+  .jj-actions-title { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+    color:#475569; width:100%; margin-bottom:2px; }
+  .jj-action-btn {
+    padding:7px 14px; border-radius:6px; border:1px solid #1e293b;
+    background:#0f172a; color:#94a3b8; font-size:11px; font-weight:700;
+    cursor:pointer; letter-spacing:1px; text-transform:uppercase; text-decoration:none;
+    display:inline-flex; align-items:center; gap:5px; transition:border-color .15s, color .15s;
+  }
+  .jj-action-btn:hover { border-color:#9fe822; color:#9fe822; }
+  .jj-action-btn.danger { border-color:rgba(239,68,68,.3); color:#ef4444; }
+  .jj-action-btn.danger:hover { background:rgba(239,68,68,.1); }
+  .jj-action-btn.active { border-color:rgba(34,197,94,.4); color:#22c55e; }
+  .jj-date-row { display:flex; align-items:center; gap:6px; }
+  .jj-date-row input[type=date] {
+    background:#060b16; border:1px solid #1e293b; color:#e2e8f0;
+    padding:6px 10px; border-radius:5px; font-size:11px; outline:none; color-scheme:dark;
+  }
+
+  /* Prize config collapsible */
+  .jj-collapse-hdr {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; cursor:pointer; user-select:none;
+    border-bottom:1px solid transparent; transition:border-color .2s;
+  }
+  .jj-collapse-hdr.open { border-bottom-color:#1e293b; }
+  .jj-collapse-body { display:none; padding:16px 20px; }
+  .jj-collapse-body.open { display:block; }
+
+  /* Config table */
+  .jj-cfg-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px; }
+  .jj-cfg-table th { padding:6px 8px; font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+    color:#475569; text-align:left; border-bottom:1px solid #1e293b; }
+  .jj-cfg-table td { padding:8px; border-bottom:1px solid #0f172a; }
+  .jj-cfg-input { background:#060b16; border:1px solid #1e293b; color:#e2e8f0;
+    padding:4px 8px; border-radius:4px; font-size:12px; width:80px; outline:none; }
+  .jj-cfg-input:focus { border-color:#9fe822; }
+  .jj-cfg-toggle { width:28px; height:16px; border-radius:8px; border:none; cursor:pointer;
+    background:#1e293b; transition:background .2s; }
+  .jj-cfg-toggle.on { background:#22c55e; }
+  .jj-cfg-lock { font-size:14px; background:none; border:none; cursor:pointer; }
+  .jj-cfg-save-btn { padding:3px 10px; background:rgba(159,232,34,.15); color:#9fe822;
+    border:1px solid rgba(159,232,34,.3); border-radius:4px; font-size:10px;
+    font-weight:700; cursor:pointer; letter-spacing:1px; }
+
+  /* Sandbox */
+  .jj-sb-card {
+    background:#060b16; border:1px solid rgba(255,255,255,.06); border-radius:8px;
+    padding:14px 16px; cursor:pointer; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center;
+    transition:border-color .2s;
+  }
+  .jj-sb-card:hover { border-color:rgba(159,232,34,.35); }
+  .jj-sb-card-title { font-size:13px; font-weight:700; color:#e2e8f0; margin-bottom:3px; }
+  .jj-sb-card-sub { font-size:11px; color:#475569; }
+  .jj-sb-icon { font-size:18px; flex-shrink:0; margin-left:12px; }
+
+  /* Empty states */
+  .jj-empty { padding:32px 20px; text-align:center; color:#334155; font-size:13px; }
+  .jj-empty-icon { font-size:28px; margin-bottom:8px; opacity:.4; }
+
+  /* Toast */
+  #jjToast { position:fixed; bottom:22px; right:22px; padding:10px 18px; border-radius:8px;
+    font-size:13px; font-weight:700; z-index:9999; display:none;
+    background:#22c55e; color:#000; box-shadow:0 4px 16px rgba(0,0,0,.5); }
+  #jjToast.err { background:#ef4444; color:#fff; }
+
+  /* Log rows */
+  .jj-log-row { display:flex; gap:12px; padding:5px 0; font-size:11px;
+    border-bottom:1px solid #0f172a; flex-wrap:wrap; }
+  .jj-log-row:last-child { border-bottom:none; }
+  .jj-log-ts { color:#475569; flex-shrink:0; }
+  .jj-log-tier { color:#e2e8f0; font-weight:700; }
+  .jj-log-field { color:#818cf8; }
+  .jj-log-old { color:#64748b; text-decoration:line-through; }
+  .jj-log-new { color:#22c55e; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jj-admin">
+
+  <!-- ══ SECTION NAVIGATION ════════════════════════════════════════════════ -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;
+              background:#060b16;border:1px solid #1e293b;border-radius:10px;align-items:center;">
+    <span style="font-size:9px;font-weight:700;letter-spacing:2px;color:#334155;text-transform:uppercase;margin-right:6px;">JUMP TO:</span>
+    <a href="#sectionQueue"   style="font-size:11px;font-weight:700;color:#9fe822;text-decoration:none;padding:5px 12px;background:rgba(159,232,34,.08);border:1px solid rgba(159,232,34,.2);border-radius:6px;">A. Action Queue</a>
+    <a href="#sectionPlayers" style="font-size:11px;font-weight:700;color:#60a5fa;text-decoration:none;padding:5px 12px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:6px;">B. Player Registry</a>
+    <a href="#sectionBoard"   style="font-size:11px;font-weight:700;color:#f59e0b;text-decoration:none;padding:5px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:6px;">C. Board Controls</a>
+    <a href="#sectionExport"  style="font-size:11px;font-weight:700;color:#a78bfa;text-decoration:none;padding:5px 12px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:6px;">D. Payment Export</a>
+    <a href="#sectionTesting" style="font-size:11px;font-weight:700;color:#475569;text-decoration:none;padding:5px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;">E. Testing Tools</a>
+    <span style="flex:1;"></span>
+    <button onclick="document.getElementById('automationGuide').style.display=document.getElementById('automationGuide').style.display==='none'?'block':'none'"
+            style="font-size:11px;color:#64748b;background:none;border:1px solid #1e293b;border-radius:6px;padding:5px 12px;cursor:pointer;">
+      ⚙ Automation Guide
+    </button>
+  </div>
+
+  <!-- ══ AUTOMATION GUIDE (collapsible) ════════════════════════════════════ -->
+  <div id="automationGuide" style="display:none;margin-bottom:18px;background:#060b16;border:1px solid #1e293b;border-radius:10px;padding:20px 24px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#9fe822;text-transform:uppercase;margin-bottom:14px;">⚙ What's Automated vs What You Must Do</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;font-size:12px;line-height:1.8;">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#22c55e;text-transform:uppercase;margin-bottom:8px;">✅ Handled Automatically</div>
+        <ul style="color:#64748b;padding-left:16px;margin:0;display:flex;flex-direction:column;gap:3px;">
+          <li>Player Code generation</li>
+          <li>Public alias generation</li>
+          <li>Submission confirmation email</li>
+          <li>Tier eligibility calculation from views</li>
+          <li>Spot release when player goes Overtime</li>
+          <li>Bonus Bank: +$100 on mini-game win, $0 on loss</li>
+          <li>Duplicate bonus prevention per overtime round</li>
+          <li>Verification email when you click Verify</li>
+          <li>Cashout-received email when player submits</li>
+          <li>Live board dot/spot updates (every 30s)</li>
+          <li>Private data protected on public board</li>
+          <li>Player can return with Player Code anytime</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#f59e0b;text-transform:uppercase;margin-bottom:8px;">👤 Admin Must Do Manually</div>
+        <ul style="color:#64748b;padding-left:16px;margin:0;display:flex;flex-direction:column;gap:3px;">
+          <li><strong style="color:#e2e8f0;">Review screenshot</strong> when player reaches cashout</li>
+          <li><strong style="color:#e2e8f0;">Click Verify</strong> to confirm view count is real</li>
+          <li><strong style="color:#e2e8f0;">Click Approve Cashout</strong> after BP submits form</li>
+          <li><strong style="color:#e2e8f0;">Click Mark Paid</strong> after sending payment in the payout provider</li>
+          <li><strong style="color:#e2e8f0;">DQ</strong> suspicious or fraudulent players</li>
+          <li>Export CSV for the payout provider payment processing</li>
+          <li>Adjust tier caps if needed</li>
+          <li>Open / close wildcard window</li>
+          <li>Monitor Fraud Radar for suspicious activity</li>
+          <li>Handle support if a player loses their code</li>
+        </ul>
+        <div style="margin-top:12px;padding:10px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-radius:6px;font-size:11px;color:#f59e0b;line-height:1.5;">
+          ⚡ Players <strong>do not wait</strong> for admin review before accessing the game. They can submit, play, and make their Cash Out / Go Overtime decision independently. Admin reviews screenshots during the cashout verification step only.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LIVE BOARD STATUS BAR ══════════════════════════════════════════════ -->
+  <div class="jj-status-bar">
+    <div class="jj-status-dot"></div>
+    <span class="jj-status-label">Live Board Status:</span>
+    <span class="jj-status-value {% if not settings.board_visible %}red{% elif campaign_status == 'Active' %}green{% elif campaign_status == 'Wildcard Window' %}yellow{% else %}red{% endif %}">
+      {% if not settings.board_visible %}Board Hidden —
+      {% elif campaign_status == 'Wildcard Window' %}🎲 Wildcard Window Open —
+      {% elif campaign_status == 'Closed' %}Campaign Closed —
+      {% else %}State Active: {% endif %}
+      {% if total == 0 %}Awaiting first submission to kick off!
+      {% else %}{{ total }} registered · {{ verified }} verified · {{ pending }} pending review
+      {% endif %}
+    </span>
+    <span style="flex:1;"></span>
+    <a href="/payout-board/live" target="_blank" class="jj-pill jj-pill-muted" style="text-decoration:none;cursor:pointer;">
+      ↗ Live Board
+    </a>
+  </div>
+
+  <!-- ══ METRIC CARDS ═══════════════════════════════════════════════════════ -->
+  <div class="jj-metrics">
+    <div class="jj-metric">
+      <div class="jj-metric-label">Campaign Registrations</div>
+      <div class="jj-metric-val">{{ total }}</div>
+      <div class="jj-metric-sub live">
+        <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+        Automated mapping active
+      </div>
+    </div>
+    <div class="jj-metric">
+      <div class="jj-metric-label">Active Overtime Risk</div>
+      {% set overtime_risk = subs | selectattr('cashed_out','equalto','No') | selectattr('status','equalto','Verified') | list | length %}
+      <div class="jj-metric-val yellow">{{ overtime_risk }}</div>
+      <div class="jj-metric-sub">Released spots back into pool</div>
+    </div>
+    <div class="jj-metric">
+      <div class="jj-metric-label">Cashed Out Securely</div>
+      <div class="jj-metric-val green">${{ budget.cashed_out_spent | default(0) }}</div>
+      <div class="jj-metric-sub">Locked via finalized payouts</div>
+    </div>
+    <div class="jj-metric">
+      <div class="jj-metric-label">Bonus Pool Incurred</div>
+      {% set total_mower = subs | sum(attribute='mower_bonus') %}
+      <div class="jj-metric-val {% if total_mower > 0 %}yellow{% endif %}">${{ total_mower }}</div>
+      <div class="jj-metric-sub">Mower arcade winnings</div>
+    </div>
+  </div>
+
+  <!-- ══ MAIN GRID ══════════════════════════════════════════════════════════ -->
+  <div class="jj-main">
+
+    <!-- ── LEFT COLUMN ──────────────────────────────────────────────────── -->
+    <div class="jj-left">
+
+      <!-- SECTION A: Today's Action Queue -->
+      <div id="sectionQueue"></div>
+      {% set cashout_requests = subs | selectattr('status','equalto','Pending') | selectattr('cashed_out','equalto','Yes') | list %}
+      {% set new_submissions  = subs | selectattr('status','equalto','Pending') | selectattr('cashed_out','ne','Yes') | list %}
+      {% set audit_queue = subs | selectattr('status','equalto','Pending') | list %}
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#9fe822;text-transform:uppercase;margin-bottom:3px;">A. TODAY'S ACTION QUEUE</div>
+            <span class="jj-panel-title">Cashout Requests &amp; New Submissions</span>
+          </div>
+          {% if cashout_requests %}
+            <span class="jj-pill jj-pill-yellow">{{ cashout_requests | length }} CASHOUT REQUEST{% if cashout_requests | length != 1 %}S{% endif %} 🔔</span>
+          {% elif audit_queue %}
+            <span class="jj-pill jj-pill-blue">{{ new_submissions | length }} new submission{% if new_submissions | length != 1 %}s{% endif %}</span>
+          {% else %}
+            <span class="jj-pill jj-pill-green">✓ All Clear</span>
+          {% endif %}
+        </div>
+        <div class="jj-panel-sub">
+          {% if cashout_requests %}
+            <strong style="color:#f59e0b;">🔔 {{ cashout_requests | length }} player{% if cashout_requests | length != 1 %}s have{% else %} has{% endif %} submitted a cash out request and need screenshot review before payment.</strong>
+            {% if new_submissions %} + {{ new_submissions | length }} new submission{% if new_submissions | length != 1 %}s{% endif %} in queue (lower priority — players are already in the game).{% endif %}
+          {% elif new_submissions %}
+            {{ new_submissions | length }} new submission{% if new_submissions | length != 1 %}s{% endif %} pending. Players are already in the game — this review is for fraud checks and view verification before payout.
+          {% else %}
+            No pending submissions. Players are in the game and can submit cashout requests when ready.
+          {% endif %}
+        </div>
+        {% if audit_queue %}
+          <table class="jj-table">
+            <thead>
+              <tr>
+                <th>Partner Details</th>
+                <th>Alias ID</th>
+                <th>Views</th>
+                <th>Tier</th>
+                <th>Status</th>
+                <th>Audit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in audit_queue | sort(attribute='sub_date', reverse=True) %}
+              <tr>
+                <td>
+                  <div style="font-weight:600;color:#e2e8f0;">{{ s.name }}</div>
+                  <div style="font-size:10px;color:#475569;margin-top:2px;">{{ s.email }}</div>
+                  <div style="font-size:10px;margin-top:2px;">
+                    {% if s.platform %}<span class="jj-pill jj-pill-blue" style="margin-right:4px;">{{ s.platform }}</span>{% endif %}
+                    {% if s.post_url %}
+                      <a href="{{ s.post_url }}" target="_blank" style="color:#60a5fa;font-size:10px;" title="{{ s.post_url }}">Post ↗</a>
+                    {% endif %}
+                    {% if s.screenshot_url %}
+                      &nbsp;<a href="{{ s.screenshot_url }}" target="_blank" style="color:#9fe822;font-size:10px;">Screenshot ↗</a>
+                    {% endif %}
+                    {% if s.co_screenshot %}
+                      &nbsp;<a href="{{ s.co_screenshot }}" target="_blank" style="color:#f59e0b;font-size:10px;">New SS ↗</a>
+                    {% endif %}
+                  </div>
+                </td>
+                <td class="alias-cell">
+                  {{ s.alias or '—' }}
+                  {% if s.plus_code %}
+                    <div style="font-size:9px;color:#9fe822;font-family:monospace;letter-spacing:1px;margin-top:3px;">{{ s.plus_code }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  <span style="color:#f1f5f9;font-weight:700;">{{ '{:,}'.format(s.impressions) }}</span>
+                  {% if s.co_impressions and s.co_impressions != 0 %}
+                    <div style="font-size:10px;color:#22c55e;margin-top:2px;">Updated: {{ '{:,}'.format(s.co_impressions) }}</div>
+                    {% if s.co_date %}
+                      <div style="font-size:9px;color:#475569;margin-top:1px;">{{ s.co_date[:10] }}</div>
+                    {% endif %}
+                  {% elif s.sub_date %}
+                    <div style="font-size:9px;color:#475569;margin-top:1px;">{{ s.sub_date[:10] }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% set _eff = s.co_impressions if (s.co_impressions and s.co_impressions != 0) else s.impressions %}
+                  {% if _eff >= 7000 %}
+                    <span class="jj-pill jj-pill-green">Top Earner</span>
+                  {% elif _eff >= 4000 %}
+                    <span class="jj-pill jj-pill-green">Double Shift</span>
+                  {% elif _eff >= 2000 %}
+                    <span class="jj-pill jj-pill-green">Day Rate</span>
+                  {% elif _eff >= 500 %}
+                    <span class="jj-pill jj-pill-green">Entry Level</span>
+                  {% else %}
+                    <span style="color:#334155;font-size:11px;">Below threshold</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.cashed_out == 'Yes' and s.payout == 'Paid' %}
+                    <span class="jj-pill jj-pill-green">Paid ✓</span>
+                  {% elif s.cashed_out == 'Yes' and s.status == 'Verified' %}
+                    <span class="jj-pill jj-pill-yellow">Cashout Approved</span>
+                  {% elif s.cashed_out == 'Yes' %}
+                    <span class="jj-pill jj-pill-yellow">Cashout Submitted</span>
+                  {% else %}
+                    <span class="jj-pill jj-pill-muted">Pending Review</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                    {% if s.cashed_out == 'Yes' and s.status != 'Verified' %}
+                      <button class="jj-btn jj-btn-green" onclick="approveCashout({{ s._row }})">✓ Approve CO</button>
+                    {% else %}
+                      <button class="jj-btn jj-btn-green" onclick="verifySubmission({{ s._row }})">✓ Verify</button>
+                    {% endif %}
+                    <button class="jj-btn jj-btn-red" onclick="disqualify({{ s._row }})">✕ DQ</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="jj-empty">
+            <div class="jj-empty-icon">☑</div>
+            Verification queue is pristine. No pending screenshot reviews!
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- SECTION B: Player Registry -->
+      <div id="sectionPlayers"></div>
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#60a5fa;text-transform:uppercase;margin-bottom:3px;">B. PLAYER REGISTRY</div>
+            <span class="jj-panel-title">All Players — Searchable</span>
+          </div>
+          <span class="jj-pill jj-pill-blue">Private Admin View</span>
+        </div>
+
+        <!-- Filters -->
+        <div style="padding:12px 20px;border-bottom:1px solid #1e293b;display:flex;gap:8px;flex-wrap:wrap;">
+          <select id="fStatus" onchange="applyFilters()" style="background:#060b16;border:1px solid #1e293b;color:#94a3b8;padding:5px 10px;border-radius:5px;font-size:11px;outline:none;">
+            <option value="">All Statuses</option>
+            <option>Pending</option><option>Verified</option><option>Disqualified</option>
+          </select>
+          <select id="fTier" onchange="applyFilters()" style="background:#060b16;border:1px solid #1e293b;color:#94a3b8;padding:5px 10px;border-radius:5px;font-size:11px;outline:none;">
+            <option value="">All Tiers</option>
+            <option value="0">No Tier</option>
+            {% for t, tc in tier_config.items() %}<option value="{{ t }}">{{ tc.name }}</option>{% endfor %}
+          </select>
+          <select id="fPayout" onchange="applyFilters()" style="background:#060b16;border:1px solid #1e293b;color:#94a3b8;padding:5px 10px;border-radius:5px;font-size:11px;outline:none;">
+            <option value="">All Payouts</option>
+            <option>Unpaid</option><option>Paid</option>
+          </select>
+          <input type="search" id="fSearch" placeholder="Search alias, name, code…" oninput="applyFilters()"
+            style="flex:1;min-width:140px;background:#060b16;border:1px solid #1e293b;color:#e2e8f0;padding:5px 10px;border-radius:5px;font-size:11px;outline:none;">
+        </div>
+
+        {% if subs %}
+        <div style="overflow-x:auto;">
+          <table class="jj-table" style="min-width:700px;">
+            <thead>
+              <tr>
+                <th>Real Name &amp; Handle</th>
+                <th>Email</th>
+                <th>Code</th>
+                <th>Views &amp; Screenshots</th>
+                <th>Unlocked Tier</th>
+                <th>Mower Bonus</th>
+                <th>Cashout State</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jjTbody">
+              {% for s in subs | sort(attribute='sub_date', reverse=True) %}
+              <tr data-status="{{ s.status }}" data-tier="{{ s.tier_qualified }}"
+                  data-payout="{{ s.payout }}"
+                  data-alias="{{ s.alias | lower }}" data-name="{{ s.name | lower }}"
+                  data-code="{{ s.plus_code | lower }}">
+                <td>
+                  <div style="font-weight:600;color:#e2e8f0;">{{ s.name }}</div>
+                  <div class="alias-cell" style="font-size:10px;margin-top:2px;">{{ s.alias or '—' }}</div>
+                  {% if s.platform %}<div style="font-size:10px;color:#475569;margin-top:1px;">{{ s.platform }}</div>{% endif %}
+                </td>
+                <td style="font-size:11px;color:#64748b;">{{ s.email }}</td>
+                <td class="code-cell">{{ s.plus_code or '—' }}</td>
+                <td>
+                  {# Current views — always shows latest (co_impressions if updated, else original) #}
+                  {% if s.co_impressions and s.co_impressions != 0 %}
+                    <div style="color:#f1f5f9;font-weight:700;">{{ '{:,}'.format(s.co_impressions) }} <span style="color:#22c55e;font-size:9px;">↑ updated</span></div>
+                    <div style="font-size:9px;color:#475569;">orig: {{ '{:,}'.format(s.impressions) }}</div>
+                  {% else %}
+                    <div style="color:#f1f5f9;font-weight:700;">{{ '{:,}'.format(s.impressions) }}</div>
+                  {% endif %}
+                  {# Screenshot links #}
+                  <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">
+                    {% if s.screenshot_url %}
+                      <a href="{{ s.screenshot_url }}" target="_blank" style="color:#9fe822;font-size:9px;text-decoration:none;">📸 orig ↗</a>
+                    {% endif %}
+                    {% if s.co_screenshot %}
+                      <a href="{{ s.co_screenshot }}" target="_blank" style="color:#f59e0b;font-size:9px;text-decoration:none;">📸 new ↗</a>
+                    {% endif %}
+                    {% if not s.screenshot_url and not s.co_screenshot %}
+                      <span style="color:#334155;font-size:9px;">no screenshots</span>
+                    {% endif %}
+                  </div>
+                  {# Submission date #}
+                  {% if s.sub_date %}
+                    <div style="font-size:9px;color:#334155;margin-top:2px;">{{ s.sub_date[:10] }}</div>
+                  {% endif %}
+                </td>
+                <td class="tier-cell">
+                  {% if s.tier_qualified and s.tier_qualified != 0 %}
+                    <span class="jj-pill jj-pill-green">
+                      {{ tier_config.get(s.tier_qualified, {}).get('name','—') }}
+                    </span>
+                  {% else %}
+                    <span style="color:#334155;">—</span>
+                  {% endif %}
+                  {% set ov = payout_overrides.get(s.plus_code) %}
+                  {% if ov %}
+                    <div style="margin-top:6px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);border-radius:6px;padding:6px 8px;" title="Admin-only — not shown on the public board">
+                      <div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#fbbf24;text-transform:uppercase;">💵 Pay Override: ${{ ov.amount }}</div>
+                      <div style="font-size:9px;color:#fcd34d;margin-top:2px;line-height:1.4;">{{ ov.note }}</div>
+                    </div>
+                  {% endif %}
+                  {% if s.cashed_out == 'Yes' and s.payout != 'Paid' %}
+                    <select onchange="setTier({{ s._row }}, this.value)" title="Repair: set the tier this player is recorded/paid at"
+                            style="margin-top:6px;width:100%;background:#060b16;border:1px solid #334155;color:#94a3b8;font-size:9px;padding:3px 4px;border-radius:4px;outline:none;">
+                      <option value="">⇄ fix tier…</option>
+                      <option value="1">Entry Level ($150)</option>
+                      <option value="2">Day Rate ($400)</option>
+                      <option value="3">Double Shift ($600)</option>
+                      <option value="4">Top Earner ($1,500)</option>
+                    </select>
+                  {% endif %}
+                </td>
+                <td class="mower-cell">
+                  {% if s.mower_bonus and s.mower_bonus != 0 %}
+                    +${{ s.mower_bonus }}
+                  {% else %}
+                    <span style="color:#334155;">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.status == 'Disqualified' %}
+                    <span class="jj-pill jj-pill-red">DQ'd</span>
+                  {% elif s.payout == 'Paid' %}
+                    <span class="jj-pill jj-pill-green">Paid ✓</span>
+                  {% elif s.cashed_out == 'Yes' and s.status == 'Verified' %}
+                    <span class="jj-pill jj-pill-yellow">Cashout Approved</span>
+                  {% elif s.cashed_out == 'Yes' %}
+                    <span class="jj-pill jj-pill-yellow">Cashout Submitted</span>
+                  {% elif s.status == 'Overtime' and s.has_played_minigame %}
+                    <span class="jj-pill jj-pill-blue">Overtime — Played</span>
+                  {% elif s.status == 'Overtime' %}
+                    <span class="jj-pill jj-pill-blue">Overtime — Not Played</span>
+                  {% elif s.status == 'Verified' and s.has_played_minigame %}
+                    <span class="jj-pill jj-pill-blue">Overtime — Played</span>
+                  {% elif s.status == 'Verified' %}
+                    <span class="jj-pill jj-pill-blue">Verified — Eligible</span>
+                  {% else %}
+                    <span class="jj-pill jj-pill-muted">Pending Review</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    {% if s.status == 'Pending' and s.cashed_out == 'Yes' %}
+                      <button class="jj-btn jj-btn-green" onclick="approveCashout({{ s._row }})">✓ Approve CO</button>
+                    {% endif %}
+                    {% if s.status == 'Pending' and s.cashed_out != 'Yes' %}
+                      <button class="jj-btn jj-btn-blue" onclick="verifySubmission({{ s._row }})">✓ Verify</button>
+                    {% endif %}
+                    {% if s.status != 'Disqualified' %}
+                      <button class="jj-btn jj-btn-red" onclick="disqualify({{ s._row }})">DQ</button>
+                    {% endif %}
+                    {% if s.status != 'Disqualified' and s.payout != 'Paid' and not (s.mower_bonus | int) %}
+                      <button class="jj-btn jj-btn-muted" onclick="awardBonus({{ s._row }})" title="Manually grant the +$100 Perfect Stripes mower bonus. Shows publicly as a mini-game win, stacks on their cash-out, and emails the win notice.">🔧 +$100 Bonus</button>
+                    {% endif %}
+                    {% if s.payout == 'Unpaid' and s.status == 'Verified' %}
+                      <button class="jj-btn jj-btn-yellow" onclick="markPaid({{ s._row }})">Mark Paid</button>
+                    {% endif %}
+                    {% if (s.status == 'Verified' or s.cashed_out == 'Yes') and s.payout != 'Paid' and s.status != 'Disqualified' %}
+                      <button class="jj-btn jj-btn-muted" onclick="unverify({{ s._row }})" title="Reopen the game — undo this verify or unpaid cash out and release their tier spot (views & progress kept)">↩ Back to Game</button>
+                    {% endif %}
+                    {% set _eff_views = (s.co_impressions if s.co_impressions else s.impressions) | int %}
+                    {% if _eff_views < 7000 and s.status != 'Disqualified' %}
+                      {% if (s.cashed_out == 'Yes' or s.status == 'Verified') and s.payout != 'Paid' %}
+                        <button class="jj-btn jj-btn-green" onclick="reopenAndNudge({{ s._row }})" title="Reopen the game AND email a keep-playing nudge">↩✉ Keep Playing</button>
+                      {% else %}
+                        <button class="jj-btn jj-btn-muted" onclick="notifyKeepPlaying({{ s._row }})" title="Email a keep-playing nudge (does not reopen)">✉ Nudge</button>
+                      {% endif %}
+                    {% endif %}
+                    {% if s.cashed_out != 'Yes' and s.status != 'Disqualified' %}
+                      <button class="jj-btn jj-btn-muted" onclick="notifyLockedOffer({{ s._row }})" title="Email: tiers locked in — take an Entry Level spot + play Perfect Stripes for a chance at +$100 (up to $250)">✉ Locked Offer</button>
+                    {% endif %}
+                    {% if s.plus_code %}
+                      <a href="/payout-board/cashout?code={{ s.plus_code }}" target="_blank"
+                         class="jj-btn jj-btn-muted">CO Link ↗</a>
+                    {% endif %}
+                    <button class="jj-btn jj-btn-muted" onclick="viewPlayer({{ s | tojson | e }})">View</button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="jj-empty">
+            <div class="jj-empty-icon">🗄</div>
+            No player registration records found in local memory.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Wildcard Management -->
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <span class="jj-panel-title">Wildcard Entries</span>
+          <span class="jj-pill {% if settings.wildcard_window_open %}jj-pill-green{% else %}jj-pill-muted{% endif %}">
+            {{ wc_won_count }}/{{ wildcard_cap }} won · ${{ wildcard_prize }} each
+          </span>
+        </div>
+        {% if wc_entries %}
+          <table class="jj-table">
+            <thead>
+              <tr><th>Alias</th><th>Name</th><th>Views</th><th>Won</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for s in wc_entries %}
+              <tr>
+                <td class="alias-cell">{{ s.alias }}</td>
+                <td style="font-size:11px;">{{ s.name }}</td>
+                <td>{{ '{:,}'.format(s.impressions) }}</td>
+                <td>{% if s.wc_won == 'Yes' %}<span class="jj-pill jj-pill-green">Won $50</span>{% else %}<span class="jj-pill jj-pill-muted">Pending</span>{% endif %}</td>
+                <td>
+                  {% if s.wc_won != 'Yes' and wc_won_count < wildcard_cap %}
+                    <button class="jj-btn jj-btn-green" onclick="approveWildcard({{ s._row }})">Mark Won</button>
+                  {% endif %}
+                  {% if s.payout == 'Unpaid' and s.wc_won == 'Yes' %}
+                    <button class="jj-btn jj-btn-yellow" onclick="markPaid({{ s._row }})">Mark Paid</button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="jj-empty" style="padding:20px;">
+            {% if settings.wildcard_window_open %}Wildcard window is open — awaiting entries.{% else %}Wildcard window not yet opened.{% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+    </div><!-- /jj-left -->
+
+    <!-- ── RIGHT COLUMN ─────────────────────────────────────────────────── -->
+    <div class="jj-right">
+
+      <!-- SECTION C: Board Controls -->
+      <div id="sectionBoard"></div>
+      <!-- Live Spot Allocation Rules -->
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#f59e0b;text-transform:uppercase;margin-bottom:3px;">C. BOARD CONTROLS</div>
+            <span class="jj-panel-title">Live Spot Allocation</span>
+          </div>
+        </div>
+        <div id="jjTierRows">
+          <div style="padding:16px 20px;font-size:11px;color:#475569;">Loading...</div>
+        </div>
+        <div style="padding:10px 20px;border-top:1px solid #1e293b;">
+          <div style="font-size:10px;color:#334155;line-height:1.5;">
+            Adjusting capacity values changes remaining spots dynamically on the public dashboard.
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Earner Waitlist — who gets a freed top-tier spot (highest views, earliest entry) -->
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <span class="jj-panel-title" style="color:#9fe822;">🏆 {{ top_tier_name }} Waitlist</span>
+          <span class="jj-pill {% if top_open_spots > 0 %}jj-pill-green{% else %}jj-pill-muted{% endif %}">
+            {{ top_open_spots }} SPOT{% if top_open_spots != 1 %}S{% endif %} OPEN
+          </span>
+        </div>
+        <div class="jj-panel-sub">Ranked by views (highest first), then earliest submission. A freed spot goes to the top of this list.</div>
+        {% if top_waitlist %}
+          {% for w in top_waitlist %}
+          <div class="jj-fraud-row" style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;font-weight:800;color:{% if w.eligible_now %}#9fe822{% else %}#475569{% endif %};min-width:26px;">#{{ w.rank }}</span>
+            <div style="flex:1;">
+              <div style="font-size:12px;font-weight:700;color:#e2e8f0;">{{ w.alias }}
+                {% if w.eligible_now %}<span style="font-size:9px;font-weight:800;color:#9fe822;background:rgba(159,232,34,0.12);border-radius:5px;padding:2px 6px;margin-left:6px;">NEXT UP</span>{% endif %}
+              </div>
+              <div style="font-size:10px;color:#64748b;">{{ '{:,}'.format(w.views) }} views · entered {{ w.sub_date }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="jj-empty" style="padding:20px;">No one waiting for {{ top_tier_name }} right now.</div>
+        {% endif %}
+      </div>
+
+      <!-- Fraud Detection Radar -->
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <span class="jj-panel-title" style="color:#f87171;">⚠ Fraud Detection Radar</span>
+          <span class="jj-pill jj-pill-red" id="fraudFlagCount">0 FLAGS</span>
+        </div>
+        <div id="fraudRadarBody">
+          <div class="jj-empty" style="padding:20px;">No matching fraud profiles flagged currently.</div>
+        </div>
+      </div>
+
+      <!-- SECTION D: Payment Export -->
+      <div id="sectionExport"></div>
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#a78bfa;text-transform:uppercase;margin-bottom:3px;">D. PAYMENT EXPORT</div>
+            <span class="jj-panel-title">Export for the payout provider</span>
+          </div>
+        </div>
+        <div style="padding:16px 20px;">
+          <div style="font-size:12px;color:#64748b;line-height:1.6;margin-bottom:12px;">
+            Download the verified player ledger as a CSV file ready for the payout provider payment processing.
+          </div>
+          <div style="background:#060b16;border:1px solid #1e293b;border-radius:6px;padding:10px 14px;margin-bottom:14px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#475569;text-transform:uppercase;margin-bottom:6px;">CSV includes:</div>
+            <div style="font-size:11px;color:#64748b;line-height:1.8;">
+              Player Code · Name · Email · Platform · Views · Tier · Prize Amount · Bonus Bank · Total Owed · Payout Status · Cashout Date · Notes
+            </div>
+          </div>
+          <a href="/payout-board/api/export-csv" class="jj-btn jj-btn-brand" style="display:flex;text-decoration:none;">
+            ☁ EXPORT TO CSV
+          </a>
+          <div style="font-size:10px;color:#334155;text-align:center;margin-top:10px;">
+            Tier prize + Bonus Bank calculated automatically.
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini-Game Stats -->
+      <div class="jj-panel">
+        <div class="jj-panel-head">
+          <span class="jj-panel-title">🚜 Mower Mini-Game</span>
+        </div>
+        <div style="padding:16px 20px;">
+          {% set mg_players = subs | selectattr('has_played_minigame','equalto',1) | list %}
+          {% set mg_winners = subs | selectattr('mower_bonus','ne',0) | list %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:#060b16;border:1px solid #1e293b;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:9px;color:#475569;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Played</div>
+              <div style="font-size:24px;font-weight:900;color:#f1f5f9;">{{ mg_players | length }}</div>
+            </div>
+            <div style="background:#060b16;border:1px solid #1e293b;border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:9px;color:#475569;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Won +$100</div>
+              <div style="font-size:24px;font-weight:900;color:#9fe822;">{{ mg_winners | length }}</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:#334155;line-height:1.5;text-align:center;">
+            Bonus Bank awarded automatically on win. No manual action needed.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /jj-right -->
+  </div><!-- /jj-main -->
+
+  <!-- ══ QUICK ACTIONS BAR (Board Controls continued) ══════════════════════ -->
+  <div class="jj-actions-bar">
+    <div class="jj-actions-title" style="color:#f59e0b;">Board Controls</div>
+    <button class="jj-action-btn {% if settings.board_visible %}active{% endif %}" onclick="toggleBoard()">
+      {% if settings.board_visible %}🟢 Board: ON{% else %}🔴 Board: OFF{% endif %}
+    </button>
+    {% if not settings.wildcard_window_open %}
+      <button class="jj-action-btn" onclick="openWildcard()">Open Wildcard Window</button>
+    {% else %}
+      <button class="jj-action-btn active" onclick="closeWildcard()">🎲 Close Wildcard Window</button>
+    {% endif %}
+    <button class="jj-action-btn {% if settings.cashouts_locked_banner %}active{% endif %}" onclick="toggleLockedBanner()"
+            title="Show/hide the public 'All cash prizes locked in' banner. Display-only — does not close any tier.">
+      {% if settings.cashouts_locked_banner %}🔒 Locked-In Banner: ON{% else %}🔓 Locked-In Banner: OFF{% endif %}
+    </button>
+    <button class="jj-action-btn {% if settings.game_locked %}active{% endif %}" onclick="toggleGameLock()"
+            title="Lock the game to NEW entries. Public board shows 'the game has ended' and the join form is closed. Existing players can still cash out / play.">
+      {% if settings.game_locked %}🏁 Game: ENDED (locked){% else %}🎮 Game: OPEN{% endif %}
+    </button>
+    <div class="jj-date-row">
+      <span style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:1px;">Close date:</span>
+      <input type="date" id="pbCloseDate"
+             value="{{ settings.campaign_close_date[:10] if settings.campaign_close_date else '' }}">
+      <button class="jj-action-btn" onclick="setCloseDate()">Set</button>
+    </div>
+    <a href="/payout-board/live" target="_blank" class="jj-action-btn" style="text-decoration:none;">Live Board ↗</a>
+    <button class="jj-action-btn" onclick="repairPaid()" title="Fix legacy Paid records missing cashed_out/spot_claimed fields">🔧 Fix Data</button>
+    <button class="jj-action-btn danger" onclick="resetCampaign()">🗑 Reset Campaign</button>
+  </div>
+
+  <!-- ══ PRIZE CONFIGURATION (collapsible) ══════════════════════════════════ -->
+  <div class="jj-panel" style="margin-bottom:20px;">
+    <div class="jj-collapse-hdr" id="cfgHdr" onclick="toggleCfg()">
+      <span class="jj-panel-title">Prize Configuration</span>
+      <span style="font-size:10px;color:#475569;" id="cfgChevron">▼ Expand</span>
+    </div>
+    <div class="jj-collapse-body" id="cfgBody">
+      <div style="font-size:11px;color:#f59e0b;margin-bottom:12px;">
+        ⚠ Updating prize amounts takes effect immediately on the public board. Changes do not affect payouts already locked by cashed-out BPs.
+      </div>
+      <table class="jj-cfg-table" id="jjCfgTable">
+        <thead>
+          <tr><th>Tier</th><th>View Threshold</th><th>Prize</th><th>Cap</th><th>Claimed</th><th>Active</th><th>Lock</th><th></th></tr>
+        </thead>
+        <tbody id="jjCfgBody">
+          <tr><td colspan="8" style="color:#475569;padding:12px;">Loading…</td></tr>
+        </tbody>
+      </table>
+      <button onclick="saveAllConfig()" style="background:#9fe822;color:#000;border:none;padding:8px 20px;border-radius:5px;font-size:11px;font-weight:900;letter-spacing:1px;cursor:pointer;">SAVE ALL</button>
+
+      <div style="margin-top:20px;">
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#475569;margin-bottom:10px;">Change Log</div>
+        <div id="jjCfgLog" style="font-size:11px;color:#475569;">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION E: TESTING TOOLS ═══════════════════════════════════════════ -->
+  <div id="sectionTesting"></div>
+  <div class="jj-panel" style="margin-bottom:30px;border-color:rgba(239,68,68,.25);">
+    <div class="jj-panel-head" onclick="toggleSandbox()" style="cursor:pointer;user-select:none;">
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#ef4444;text-transform:uppercase;margin-bottom:3px;">E. TESTING TOOLS</div>
+        <span class="jj-panel-title" style="color:#f87171;">🧪 Sandbox — Do Not Use During Live Campaign</span>
+      </div>
+      <span id="sandboxChevron" style="font-size:11px;color:#475569;">▼ Click to Expand</span>
+    </div>
+    <div id="sandboxBody" style="display:none;">
+    <div style="padding:10px 20px;background:rgba(239,68,68,.04);border-bottom:1px solid rgba(239,68,68,.1);">
+      <div style="font-size:12px;color:#f87171;font-weight:700;">⚠ These tools inject fake test data and perform destructive operations. Only use before launch or in a test environment.</div>
+    </div>
+    <div style="padding:12px 20px 4px;font-size:11px;color:#475569;">
+      Use this panel to bypass manual sign-ups and seed test scenarios to verify the game flow end-to-end.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 20px;">
+
+      <!-- Seed Scenarios -->
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#475569;margin-bottom:10px;">⚙ Seed Scenarios</div>
+
+        <div class="jj-sb-card" onclick="sandboxAction('seed-creators')" id="sbCardCreators">
+          <div>
+            <div class="jj-sb-card-title">Seed 4 Diverse Creators</div>
+            <div class="jj-sb-card-sub">Populates directory, ledger registry, and pending screenshots.</div>
+          </div>
+          <span class="jj-sb-icon" id="sbIconCreators">＋</span>
+        </div>
+
+        <div class="jj-sb-card" onclick="sandboxAction('seed-tier-caps')" id="sbCardCaps">
+          <div>
+            <div class="jj-sb-card-title">Simulate Filled Spots Cap</div>
+            <div class="jj-sb-card-sub">Fills payout tiers to test "Exceeded Slots" risk warnings.</div>
+          </div>
+          <span class="jj-sb-icon" id="sbIconCaps">🔒</span>
+        </div>
+
+        <div class="jj-sb-card" onclick="sandboxAction('inject-fraud')" id="sbCardFraud">
+          <div>
+            <div class="jj-sb-card-title">Inject Fraud &amp; Duplicate Handle</div>
+            <div class="jj-sb-card-sub">Triggers neon flags inside the Fraud Detection Radar.</div>
+          </div>
+          <span class="jj-sb-icon" id="sbIconFraud">🛡</span>
+        </div>
+
+        <div class="jj-sb-card" onclick="sandboxRepair()" id="sbCardRepair">
+          <div>
+            <div class="jj-sb-card-title">🔧 Repair Paid Records</div>
+            <div class="jj-sb-card-sub">Fixes legacy Paid players missing cashed_out/spot_claimed/tier fields so dots fill correctly.</div>
+          </div>
+          <span class="jj-sb-icon" id="sbIconRepair">🔧</span>
+        </div>
+
+        <div class="jj-sb-card" style="cursor:default;opacity:0.8;">
+          <div>
+            <div class="jj-sb-card-title">🏎️ Test Mower Mini-Game</div>
+            <div class="jj-sb-card-sub">Seed creators → Verify one in admin → click <strong style="color:#9fe822;">CO LINK ↗</strong> → click <strong style="color:#9fe822;">GO OVERTIME!</strong> on the cashout page to launch the game.</div>
+          </div>
+          <span class="jj-sb-icon">ℹ️</span>
+        </div>
+      </div>
+
+      <!-- Platform Reset -->
+      <div style="display:flex;flex-direction:column;">
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#475569;margin-bottom:10px;">⚖ Platform Reset</div>
+        <div style="background:#060b16;border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:16px;flex:1;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-size:12px;color:#475569;line-height:1.6;">
+            Wipe all player database records, reset pool claimed status variables, and return both view segments to a <strong style="color:#e2e8f0;">pristine 100% empty slate</strong>.
+          </div>
+          <div style="flex:1;"></div>
+          <button onclick="sandboxReset()"
+            style="width:100%;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);
+                   color:#f87171;font-family:inherit;font-size:11px;font-weight:900;
+                   letter-spacing:1px;text-transform:uppercase;padding:12px;border-radius:6px;cursor:pointer;">
+            🗑️ &nbsp;WIPE &amp; RESET SLATE TO 100% EMPTY
+          </button>
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#334155;text-align:center;">
+            Recommended Launch Calibration Step
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result output -->
+    <div id="sbResult" style="display:none;margin:0 20px 16px;background:#060b16;border:1px solid rgba(159,232,34,.2);border-radius:8px;padding:14px;font-size:12px;line-height:1.8;"></div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;font-size:10px;color:#1e293b;padding-bottom:20px;letter-spacing:1px;">
+    © 2026 Jobsite Jackpot Ecosystem.
+  </div>
+
+</div><!-- /jj-admin -->
+
+<!-- ══ PLAYER DETAIL MODAL ════════════════════════════════════════════════ -->
+<div id="playerModal" style="display:none;position:fixed;inset:0;z-index:10000;
+     background:rgba(0,0,0,.85);overflow-y:auto;padding:24px;"
+     onclick="if(event.target===this)closePlayerModal()">
+  <div style="max-width:640px;margin:0 auto;background:#0b1120;
+              border:1px solid #1e293b;border-radius:16px;overflow:hidden;">
+    <!-- Modal header -->
+    <div style="padding:14px 24px;background:#060b16;border-bottom:1px solid #1e293b;
+                display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#9fe822;text-transform:uppercase;">
+        Player File — Private Admin View
+      </div>
+      <button onclick="closePlayerModal()"
+              style="background:none;border:none;color:#475569;font-size:22px;cursor:pointer;line-height:1;padding:0 2px;">×</button>
+    </div>
+    <!-- Modal body (filled by JS) -->
+    <div id="playerModalBody" style="padding:24px;"></div>
+    <!-- Modal footer -->
+    <div style="padding:14px 24px;background:#060b16;border-top:1px solid #1e293b;
+                display:flex;justify-content:flex-end;gap:8px;">
+      <button onclick="closePlayerModal()" class="jj-btn jj-btn-muted">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="jjToast"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+/* ── Utilities ──────────────────────────────────────────────────── */
+function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg, err) {
+  const t = document.getElementById('jjToast');
+  t.textContent = msg; t.className = err ? 'err' : '';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 3200);
+}
+function post(url, body) {
+  return fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(r=>r.json());
+}
+
+/* ── Row actions ────────────────────────────────────────────────── */
+function verifySubmission(row) {
+  post('/payout-board/api/verify/' + row, {})
+    .then(d => { if(d.ok){ toast('Verified — ' + (d.tier_name||'No tier assigned')); setTimeout(()=>location.reload(),1200); } else toast(d.error,true); });
+}
+
+function approveCashout(row) {
+  post('/payout-board/api/approve-cashout/' + row, {})
+    .then(d => { if(d.ok){ toast('Approved — ' + (d.spot==='Yes' ? d.tier_name+' spot locked' : 'no open spot')); setTimeout(()=>location.reload(),1200); } else toast(d.error,true); });
+}
+
+function reopenAndNudge(row) {
+  if(!confirm("Bump this creator back into the game AND email them a 'keep playing' nudge?\n\nUndoes their cash out, releases their tier spot, and emails how many more views they need. (Already-paid players can't be reopened.)")) return;
+  post('/payout-board/api/reopen-and-nudge/' + row, {})
+    .then(d => {
+      if(!d.ok){ toast(d.error, true); return; }
+      var msg = 'Back in the game';
+      if(d.target){ msg += d.sent ? (' — nudge sent (' + d.views_needed.toLocaleString() + ' views from ' + d.target + ')')
+                                   : ' — reopened, but email not configured'; }
+      toast(msg);
+      setTimeout(()=>location.reload(), 1400);
+    });
+}
+
+function notifyKeepPlaying(row) {
+  if(!confirm("Email this creator a 'keep playing' nudge? It tells them they haven't hit the next tier's views yet and encourages them to keep growing.")) return;
+  post('/payout-board/api/notify-keep-playing/' + row, {})
+    .then(d => {
+      if(!d.ok){ toast(d.error, true); return; }
+      toast(d.sent ? ('Nudge sent — ' + d.views_needed.toLocaleString() + ' views from ' + d.target)
+                   : 'Email not configured — nudge not sent.', !d.sent);
+    });
+}
+
+function notifyLockedOffer(row) {
+  if(!confirm("Email this creator the locked-in consolation offer? It tells them the prize tiers are all locked in, but they can still take an Entry Level spot and play Perfect Stripes for a chance at +$100 (up to $250).")) return;
+  post('/payout-board/api/notify-locked-offer/' + row, {})
+    .then(d => {
+      if(!d.ok){ toast(d.error, true); return; }
+      toast(d.sent ? 'Locked-in offer sent.' : 'Email not configured — offer not sent.', !d.sent);
+    });
+}
+
+function unverify(row) {
+  if(!confirm('Reopen the game for this player?\n\nThis undoes their verify or unpaid cash out and releases their tier spot. Their views, tier progress, and any mower bonus are kept. (Already-paid players cannot be reopened.)')) return;
+  post('/payout-board/api/unverify/' + row, {})
+    .then(d => { if(d.ok){ toast('Reopened — back in the game, tier spot released.'); setTimeout(()=>location.reload(),1200); } else toast(d.error,true); });
+}
+
+function disqualify(row) {
+  if(!confirm('Disqualify this submission?')) return;
+  post('/payout-board/api/disqualify/' + row, {})
+    .then(d => { if(d.ok){ toast('Disqualified.'); setTimeout(()=>location.reload(),1200); } else toast(d.error,true); });
+}
+
+function setTier(row, tier) {
+  if(!tier) return;
+  var names = {'1':'Entry Level ($150)','2':'Day Rate ($400)','3':'Double Shift ($600)','4':'Top Earner ($1,500)'};
+  if(!confirm('Set this player\'s recorded tier to ' + (names[tier]||tier) + '?\n\nThis changes what they are counted at on the board and paid. Use it to repair a mis-tiered record.')) { return; }
+  post('/payout-board/api/set-tier/' + row, {tier: parseInt(tier,10)})
+    .then(d => { if(d.ok){ toast('Tier set to ' + d.tier_name + (d.warning ? ' — ' + d.warning : '.')); setTimeout(()=>location.reload(),1400); } else toast(d.error,true); });
+}
+
+function awardBonus(row) {
+  if(!confirm('Grant the +$100 Perfect Stripes mower bonus to this player?\n\nThis shows PUBLICLY as a mini-game win, stacks +$100 on their cash-out, uses one of the 10 bonus-pool slots, and emails them the win notice.')) return;
+  post('/payout-board/api/award-bonus/' + row, {})
+    .then(d => { if(d.ok){ toast('+$100 mower bonus granted' + (d.emailed ? ' — win email sent.' : ' (email not sent).')); setTimeout(()=>location.reload(),1400); } else toast(d.error,true); });
+}
+
+function markPaid(row) {
+  post('/payout-board/api/mark-paid/' + row, {})
+    .then(d => { if(d.ok){ toast('Marked paid.'); setTimeout(()=>location.reload(),1200); } else toast(d.error,true); });
+}
+
+function approveWildcard(row) {
+  post('/payout-board/api/approve-wildcard/' + row, {})
+    .then(d => { if(d.ok){ toast('Wildcard won! +$50'); setTimeout(()=>location.reload(),1200); } else toast(d.error,true); });
+}
+
+/* ── Tier controls ──────────────────────────────────────────────── */
+function closeTier(t)  { post('/payout-board/api/close-tier/' +t, {}).then(d=>{ if(d.ok){toast('Tier '+t+' closed.');setTimeout(()=>location.reload(),1200);}else toast(d.error,true); }); }
+function reopenTier(t) { post('/payout-board/api/reopen-tier/'+t, {}).then(d=>{ if(d.ok){toast('Tier '+t+' reopened.');setTimeout(()=>location.reload(),1200);}else toast(d.error,true); }); }
+
+/* ── Board / wildcard controls ──────────────────────────────────── */
+function toggleBoard() { post('/payout-board/api/toggle-board',{}).then(d=>{ if(d.ok){toast('Board '+(d.visible?'ON':'OFF'));setTimeout(()=>location.reload(),1200);} }); }
+function toggleLockedBanner() { post('/payout-board/api/toggle-locked-banner',{}).then(d=>{ if(d.ok){toast('Locked-in banner '+(d.locked?'ON':'OFF'));setTimeout(()=>location.reload(),1200);} else toast(d.error,true); }); }
+function toggleGameLock() {
+  var s = {{ 'true' if settings.game_locked else 'false' }};
+  if(!confirm(s ? 'Re-open the game to new entries?' : 'Lock the game? The public board will show "the game has ended" and no one can join. Existing players can still cash out / play.')) return;
+  post('/payout-board/api/toggle-game-lock',{}).then(d=>{ if(d.ok){toast('Game '+(d.locked?'LOCKED — ended':'re-opened'));setTimeout(()=>location.reload(),1200);} else toast(d.error,true); });
+}
+function openWildcard()  { if(!confirm('Open the 24-hour Wildcard Window?'))return; post('/payout-board/api/open-wildcard-window',{}).then(d=>{if(d.ok){toast('Wildcard window opened.');setTimeout(()=>location.reload(),1200);}else toast(d.error,true);}); }
+function closeWildcard() { post('/payout-board/api/close-wildcard-window',{}).then(d=>{if(d.ok){toast('Wildcard window closed.');setTimeout(()=>location.reload(),1200);}else toast(d.error,true);}); }
+
+function setCloseDate() {
+  const v = document.getElementById('pbCloseDate').value;
+  post('/payout-board/api/set-close-date',{close_date:v}).then(d=>{ if(d.ok) toast('Close date set.'); else toast(d.error,true); });
+}
+
+function resetCampaign() {
+  if(!confirm('RESET the campaign? All data will be cleared.'))return;
+  if(!confirm('Final confirmation — this cannot be undone.'))return;
+  post('/payout-board/api/reset-campaign',{confirmed:true})
+    .then(d=>{ if(d.ok){toast('Campaign reset.');setTimeout(()=>location.reload(),1500);}else toast(d.error,true); });
+}
+
+/* ── Table filters ──────────────────────────────────────────────── */
+function applyFilters() {
+  const st = document.getElementById('fStatus').value;
+  const ti = document.getElementById('fTier').value;
+  const py = document.getElementById('fPayout').value;
+  const sr = document.getElementById('fSearch').value.toLowerCase();
+  document.querySelectorAll('#jjTbody tr').forEach(tr => {
+    const ok = (!st || tr.dataset.status===st)
+            && (!ti || tr.dataset.tier===ti)
+            && (!py || tr.dataset.payout===py)
+            && (!sr || tr.dataset.alias.includes(sr) || tr.dataset.name.includes(sr) || tr.dataset.code.includes(sr));
+    tr.style.display = ok ? '' : 'none';
+  });
+}
+
+/* ── Live Spot Allocation Rules (prize config) ──────────────────── */
+var _cfgData = [];
+function loadTierRows() {
+  fetch('/payout-board/admin/prize-config').then(r=>r.json()).then(data => {
+    _cfgData = data.config;
+    var html = '';
+    data.config.forEach(function(row) {
+      if (row.tier_name === 'Mini-Game Bonus') return; // skip mini-game row
+      var pct = row.spot_cap > 0 ? Math.min(100, Math.round((row.spots_claimed||0)/row.spot_cap*100)) : 0;
+      var barColor = pct >= 100 ? '#ef4444' : pct >= 75 ? '#f59e0b' : '#22c55e';
+      html += '<div class="jj-tier-row">' +
+        '<div>' +
+          '<div class="jj-tier-name">' + esc(row.tier_name) + ' ($' + row.prize_amount.toLocaleString() + ')</div>' +
+          '<div class="jj-tier-claimed">Claimed: ' + (row.spots_claimed||0) + ' / ' + row.spot_cap + '</div>' +
+          '<div style="height:3px;background:#1e293b;border-radius:2px;margin-top:6px;overflow:hidden;">' +
+            '<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px;transition:width .4s;"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="jj-cap-group">' +
+          '<span class="jj-cap-label">Cap Limit:</span>' +
+          '<input class="jj-cap-input" type="number" min="1" id="cap_' + row.id + '" value="' + row.spot_cap + '">' +
+          '<button class="jj-cap-save" onclick="saveTierCap('+row.id+')">SAVE</button>' +
+        '</div>' +
+      '</div>';
+    });
+    document.getElementById('jjTierRows').innerHTML = html || '<div style="padding:16px 20px;color:#475569;font-size:12px;">No tier data.</div>';
+  });
+}
+function saveTierCap(id) {
+  var row = _cfgData.find(r=>r.id===id);
+  if(!row) return;
+  var newCap = parseInt(document.getElementById('cap_'+id).value)||1;
+  var payload = Object.assign({}, row, {spot_cap: newCap});
+  fetch('/payout-board/admin/prize-config/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(d=>{ if(d.ok){toast('Cap updated.');loadTierRows();}else toast(d.error,true); });
+}
+
+/* ── Fraud Detection Radar ──────────────────────────────────────── */
+function runFraudRadar() {
+  var rows = document.querySelectorAll('#jjTbody tr');
+  var flags = [];
+  var aliasCounts = {};
+
+  rows.forEach(function(tr) {
+    var alias = tr.dataset.alias;
+    aliasCounts[alias] = (aliasCounts[alias]||0)+1;
+  });
+
+  // Count active (non-DQ) entries by real name + social handle, to catch one
+  // person entering more than once under different emails / Player Codes.
+  var nameCounts = {}, handleCounts = {};
+  {% for s in subs %}{% if s.status != 'Disqualified' %}
+  (function(){
+    var n  = ({{ (s.name or '') | tojson }}).trim().toLowerCase();
+    var hd = ({{ (s.handle or '') | tojson }}).trim().toLowerCase().replace(/^@/,'');
+    if (n)  nameCounts[n]    = (nameCounts[n]||0)+1;
+    if (hd) handleCounts[hd] = (handleCounts[hd]||0)+1;
+  })();
+  {% endif %}{% endfor %}
+
+  {% for s in subs %}
+  (function() {
+    var sub = {
+      row:     {{ s._row }},
+      alias:   {{ s.alias | tojson }},
+      email:   {{ s.email | tojson }},
+      name:    {{ (s.name or '') | tojson }},
+      handle:  {{ (s.handle or '') | tojson }},
+      views:   {{ s.impressions | default(0) }},
+      notes:   {{ s.notes | tojson }},
+      status:  {{ s.status | tojson }},
+    };
+    if (sub.notes && sub.notes.indexOf('FRAUD') === 0) {
+      flags.push({ alias: sub.alias, reason: sub.notes, row: sub.row });
+    } else if (sub.views > 50000) {
+      flags.push({ alias: sub.alias, reason: 'Implausible view count: ' + sub.views.toLocaleString(), row: sub.row });
+    }
+    if ((aliasCounts[sub.alias.toLowerCase()]||0) > 1) {
+      flags.push({ alias: sub.alias, reason: 'Duplicate alias detected', row: sub.row });
+    }
+    // Same person, multiple entries (different emails/codes) — the one-per-creator check
+    var _nm = (sub.name||'').trim().toLowerCase();
+    var _hd = (sub.handle||'').trim().toLowerCase().replace(/^@/,'');
+    if (sub.status !== 'Disqualified' && _nm && nameCounts[_nm] > 1) {
+      flags.push({ alias: sub.alias, reason: 'Possible double entry — name "' + sub.name + '" appears on ' + nameCounts[_nm] + ' active entries (one entry per creator)', row: sub.row });
+    }
+    if (sub.status !== 'Disqualified' && _hd && handleCounts[_hd] > 1) {
+      flags.push({ alias: sub.alias, reason: 'Possible double entry — handle @' + _hd + ' appears on ' + handleCounts[_hd] + ' active entries', row: sub.row });
+    }
+  })();
+  {% endfor %}
+
+  // Deduplicate by row+reason
+  var seen = {};
+  flags = flags.filter(function(f) {
+    var key = f.row + '_' + f.reason;
+    if (seen[key]) return false;
+    seen[key] = true; return true;
+  });
+
+  var pill = document.getElementById('fraudFlagCount');
+  var body = document.getElementById('fraudRadarBody');
+  pill.textContent = flags.length + ' FLAG' + (flags.length !== 1 ? 'S' : '');
+
+  if (flags.length === 0) {
+    body.innerHTML = '<div class="jj-empty" style="padding:20px;">No matching fraud profiles flagged currently.</div>';
+    return;
+  }
+  body.innerHTML = flags.map(function(f) {
+    return '<div class="jj-fraud-row">' +
+      '<div class="jj-fraud-alias">' + esc(f.alias) + '</div>' +
+      '<div class="jj-fraud-reason">⚑ ' + esc(f.reason) + '</div>' +
+      '<div style="margin-top:6px;">' +
+        '<button class="jj-btn jj-btn-red" onclick="disqualify('+f.row+')" style="font-size:9px;padding:3px 8px;">DQ</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ── Prize Config (full table, collapsible) ─────────────────────── */
+function toggleCfg() {
+  var body = document.getElementById('cfgBody');
+  var hdr  = document.getElementById('cfgHdr');
+  var chev = document.getElementById('cfgChevron');
+  var open = body.classList.toggle('open');
+  hdr.classList.toggle('open', open);
+  chev.textContent = open ? '▲ Collapse' : '▼ Expand';
+  if (open) loadFullConfig();
+}
+var _fullCfg = [];
+function loadFullConfig() {
+  fetch('/payout-board/admin/prize-config').then(r=>r.json()).then(data=>{
+    _fullCfg = data.config;
+    var tbody = document.getElementById('jjCfgBody');
+    tbody.innerHTML = data.config.map(function(row){
+      return '<tr data-id="'+row.id+'">' +
+        '<td><input class="jj-cfg-input" data-field="tier_name" value="'+esc(row.tier_name)+'"></td>'+
+        '<td><input class="jj-cfg-input" type="number" data-field="view_threshold" value="'+row.view_threshold+'"></td>'+
+        '<td><input class="jj-cfg-input" type="number" data-field="prize_amount" value="'+row.prize_amount+'"></td>'+
+        '<td><input class="jj-cfg-input" type="number" data-field="spot_cap" value="'+row.spot_cap+'"></td>'+
+        '<td style="color:#475569;font-size:11px;">'+(row.spots_claimed||0)+'/'+row.spot_cap+'</td>'+
+        '<td><button class="jj-cfg-toggle '+(row.active?'on':'')+'" data-toggle="active" onclick="this.classList.toggle(\'on\')" title="Active"></button></td>'+
+        '<td><button class="jj-cfg-lock" data-toggle="locked" onclick="toggleLock(this)">'+(row.locked?'🔒':'🔓')+'</button></td>'+
+        '<td><button class="jj-cfg-save-btn" onclick="saveCfgRow('+row.id+',this)">SAVE</button></td>'+
+      '</tr>';
+    }).join('');
+    // Log
+    var logEl = document.getElementById('jjCfgLog');
+    if(!data.log.length){ logEl.innerHTML='<div style="color:#334155;">No changes yet.</div>'; return; }
+    logEl.innerHTML = data.log.map(function(e){
+      return '<div class="jj-log-row"><span class="jj-log-ts">'+esc(e.ts)+'</span><span class="jj-log-tier">'+esc(e.tier_name)+'</span><span class="jj-log-field">'+esc(e.field)+'</span><span class="jj-log-old">'+esc(e.old_value)+'</span><span class="jj-log-new">'+esc(e.new_value)+'</span></div>';
+    }).join('');
+  });
+}
+function toggleLock(btn) {
+  var isLocked = btn.textContent.trim()==='🔒';
+  btn.textContent = isLocked ? '🔓' : '🔒';
+}
+function getCfgRowData(rowEl) {
+  var d = {id: parseInt(rowEl.dataset.id)};
+  rowEl.querySelectorAll('[data-field]').forEach(function(inp){ d[inp.dataset.field] = inp.type==='number' ? parseInt(inp.value) : inp.value; });
+  d.active = rowEl.querySelector('[data-toggle="active"]').classList.contains('on') ? 1 : 0;
+  d.locked = rowEl.querySelector('[data-toggle="locked"]').textContent.trim()==='🔒' ? 1 : 0;
+  return d;
+}
+function saveCfgRow(id, btn) {
+  var rowEl = btn.closest('tr');
+  var d = getCfgRowData(rowEl);
+  btn.textContent = '…';
+  fetch('/payout-board/admin/prize-config/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)})
+    .then(r=>r.json()).then(function(res){ btn.textContent=res.ok?'✓':'✕'; setTimeout(function(){btn.textContent='SAVE';loadTierRows();},1500); });
+}
+function saveAllConfig() {
+  var rows = document.querySelectorAll('#jjCfgBody tr[data-id]');
+  Promise.all(Array.from(rows).map(r=>fetch('/payout-board/admin/prize-config/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(getCfgRowData(r))}).then(r=>r.json())))
+    .then(()=>{ toast('All config saved.'); loadTierRows(); loadFullConfig(); });
+}
+
+/* ── Sandbox Tester ─────────────────────────────────────────────── */
+var SB_MAP = {
+  'seed-creators': { card:'sbCardCreators', icon:'sbIconCreators' },
+  'seed-tier-caps': { card:'sbCardCaps',    icon:'sbIconCaps' },
+  'inject-fraud':   { card:'sbCardFraud',   icon:'sbIconFraud' },
+};
+function sandboxAction(type) {
+  var m = SB_MAP[type]; if(!m) return;
+  var card = document.getElementById(m.card);
+  var icon = document.getElementById(m.icon);
+  icon.textContent = '⏳';
+  card.style.borderColor = 'rgba(159,232,34,.4)';
+
+  post('/payout-board/sandbox/' + type, {})
+    .then(function(data) {
+      icon.textContent = data.ok ? '✅' : '❌';
+      card.style.borderColor = data.ok ? 'rgba(159,232,34,.5)' : 'rgba(239,68,68,.5)';
+      if(!data.ok){ toast(data.error||'Error',true); return; }
+
+      var rows = data.created || data.injected || data.capped || [];
+      var el = document.getElementById('sbResult');
+      el.style.display='block';
+
+      if(type==='seed-creators') {
+        el.innerHTML = '<div style="color:#9fe822;font-weight:700;margin-bottom:10px;">✅ '+rows.length+' test account(s) seeded — player codes below:</div>' +
+          '<table style="width:100%;border-collapse:collapse;">' +
+          '<tr style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#475569;">' +
+          '<th style="padding:4px;text-align:left;">Name</th><th style="padding:4px 8px;text-align:left;">Alias</th>' +
+          '<th style="padding:4px 8px;text-align:left;">Player Code</th><th style="padding:4px 8px;text-align:left;">Tier</th>' +
+          '<th style="padding:4px 8px;text-align:right;">Views</th></tr>' +
+          (rows.length===0 ? '<tr><td colspan="5" style="color:#475569;padding:8px;">All test accounts already exist — reset first to re-seed.</td></tr>' :
+          rows.map(function(r){
+            return '<tr style="border-top:1px solid rgba(255,255,255,.04);">' +
+              '<td style="padding:6px 4px;color:#e2e8f0;">'+r.name+'</td>'+
+              '<td style="padding:6px 8px;color:#fbbf24;font-weight:700;">'+r.alias+'</td>'+
+              '<td style="padding:6px 8px;font-family:monospace;color:#9fe822;letter-spacing:2px;font-weight:700;">'+r.code+'</td>'+
+              '<td style="padding:6px 8px;color:#94a3b8;">'+r.tier+'</td>'+
+              '<td style="padding:6px 8px;text-align:right;color:#94a3b8;">'+r.views.toLocaleString()+'</td>'+
+            '</tr>';
+          }).join('')) +
+          '</table>';
+      } else if(type==='seed-tier-caps') {
+        el.innerHTML = '<div style="color:#9fe822;font-weight:700;margin-bottom:8px;">✅ Tier caps simulated:</div>' +
+          (rows.length===0 ? '<div style="color:#475569;">All tiers already at capacity.</div>' :
+          rows.map(r=>'<div>• <strong style="color:#e2e8f0;">'+r.tier+'</strong> — '+r.slots_filled+' slot(s) filled</div>').join(''));
+      } else if(type==='inject-fraud') {
+        el.innerHTML = '<div style="color:#f59e0b;font-weight:700;margin-bottom:8px;">⚠️ '+rows.length+' fraud submission(s) injected:</div>' +
+          (rows.length===0 ? '<div style="color:#475569;">Fraud accounts already exist — reset first to re-inject.</div>' :
+          rows.map(r=>'<div>• <strong style="color:#fbbf24;">'+r.alias+'</strong> ('+r.email+') — <span style="color:#ef4444;">'+r.flag+'</span></div>').join(''));
+        runFraudRadar();
+      }
+    })
+    .catch(()=>{ toast('Network error',true); icon.textContent='❌'; });
+}
+
+function sandboxRepair() {
+  var icon = document.getElementById('sbIconRepair');
+  var card = document.getElementById('sbCardRepair');
+  icon.textContent = '⏳';
+  post('/payout-board/api/repair-paid', {})
+    .then(function(data) {
+      icon.textContent = data.ok ? '✅' : '❌';
+      card.style.borderColor = data.ok ? 'rgba(159,232,34,.5)' : 'rgba(239,68,68,.5)';
+      var el = document.getElementById('sbResult');
+      el.style.display = 'block';
+      if (data.fixed === 0) {
+        el.innerHTML = '<div style="color:#9fe822;">✅ All paid records already correct — no repairs needed.</div>';
+      } else {
+        el.innerHTML = '<div style="color:#9fe822;font-weight:700;margin-bottom:8px;">✅ Repaired ' + data.fixed + ' paid record(s):</div>' +
+          (data.records||[]).map(function(r){
+            return '<div>• <strong style="color:#fbbf24;">' + esc(r.alias) + '</strong> — ' + r.changes.join(', ') + '</div>';
+          }).join('');
+      }
+    })
+    .catch(function(){ toast('Repair failed', true); icon.textContent='❌'; });
+}
+
+function sandboxReset() {
+  if(!confirm('WIPE all data and reset to 100% empty?'))return;
+  if(!confirm('Final confirmation — cannot be undone.'))return;
+  post('/payout-board/api/reset-campaign',{confirmed:true})
+    .then(d=>{ if(d.ok){toast('Platform reset to empty slate.');setTimeout(()=>location.reload(),1500);}else toast(d.error||'Reset failed',true); });
+}
+
+/* ── Sandbox toggle ─────────────────────────────────────────────── */
+function toggleSandbox() {
+  var body = document.getElementById('sandboxBody');
+  var chev = document.getElementById('sandboxChevron');
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  chev.textContent = isOpen ? '▼ Click to Expand' : '▲ Click to Collapse';
+}
+
+/* ── Fix Data (repair paid records, from Quick Actions bar) ─────── */
+function repairPaid() {
+  post('/payout-board/api/repair-paid', {})
+    .then(function(data) {
+      if (!data.ok) { toast(data.error || 'Repair failed', true); return; }
+      if (data.fixed === 0) {
+        toast('✓ All paid records are already correct — nothing to repair.');
+      } else {
+        toast('✓ Repaired ' + data.fixed + ' paid record(s).');
+        setTimeout(() => location.reload(), 1500);
+      }
+    })
+    .catch(function() { toast('Repair request failed', true); });
+}
+
+/* ── Player detail modal ─────────────────────────────────────────── */
+function _pmRow(label, value) {
+  return '<div style="background:#060b16;border:1px solid #1e293b;border-radius:8px;padding:12px;">' +
+    '<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:4px;">' + label + '</div>' +
+    '<div style="font-size:13px;color:#e2e8f0;">' + value + '</div>' +
+  '</div>';
+}
+
+function viewPlayer(sub) {
+  var modal = document.getElementById('playerModal');
+  var body  = document.getElementById('playerModalBody');
+
+  // Status pill
+  var statusPill = '';
+  if (sub.status === 'Disqualified') {
+    statusPill = '<span class="jj-pill jj-pill-red">DQ\'d</span>';
+  } else if (sub.payout === 'Paid') {
+    statusPill = '<span class="jj-pill jj-pill-green">Paid ✓</span>';
+  } else if (sub.cashed_out === 'Yes' && sub.status === 'Verified') {
+    statusPill = '<span class="jj-pill jj-pill-yellow">Cashout Approved</span>';
+  } else if (sub.cashed_out === 'Yes') {
+    statusPill = '<span class="jj-pill jj-pill-yellow">Cashout Submitted</span>';
+  } else if (sub.status === 'Overtime' && sub.has_played_minigame) {
+    statusPill = '<span class="jj-pill jj-pill-blue">Overtime — Played</span>';
+  } else if (sub.status === 'Overtime') {
+    statusPill = '<span class="jj-pill jj-pill-blue">Overtime — Not Played</span>';
+  } else if (sub.status === 'Verified' && sub.has_played_minigame) {
+    statusPill = '<span class="jj-pill jj-pill-blue">Overtime — Played</span>';
+  } else if (sub.status === 'Verified') {
+    statusPill = '<span class="jj-pill jj-pill-blue">Verified — Eligible</span>';
+  } else {
+    statusPill = '<span class="jj-pill jj-pill-muted">Pending Review</span>';
+  }
+
+  var effectiveViews = (sub.co_impressions && sub.co_impressions != 0) ? sub.co_impressions : (sub.impressions || 0);
+  var viewsLabel = parseInt(effectiveViews||0).toLocaleString();
+  if (sub.co_impressions && sub.co_impressions != 0) {
+    viewsLabel += ' <span style="color:#22c55e;font-size:10px;">(updated)</span>';
+  }
+
+  var bonusLabel = (sub.mower_bonus && sub.mower_bonus != 0)
+    ? '<span style="color:#f59e0b;font-weight:700;">+$' + sub.mower_bonus + '</span>'
+    : '<span style="color:#334155;">—</span>';
+
+  var tierLabel = (sub.cash_out_tier && sub.cash_out_tier !== 'None')
+    ? '<span style="color:#9fe822;">' + esc(sub.cash_out_tier) + '</span>'
+    : '<span style="color:#334155;">—</span>';
+
+  var ssLinks = '';
+  if (sub.screenshot_url) ssLinks += '<a href="'+esc(sub.screenshot_url)+'" target="_blank" class="jj-btn jj-btn-muted" style="margin-right:6px;">📸 Original SS ↗</a>';
+  if (sub.co_screenshot)  ssLinks += '<a href="'+esc(sub.co_screenshot)+'"  target="_blank" class="jj-btn jj-btn-yellow">📸 Updated SS ↗</a>';
+
+  // Pre-payout gut-check — only while the cashout is awaiting payment
+  var _ck = function(t){ return '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#cbd5e1;margin-bottom:7px;cursor:pointer;"><input type="checkbox" style="margin-top:2px;accent-color:#9fe822;flex-shrink:0;"><span>'+t+'</span></label>'; };
+  var payoutChecklist = (sub.cashed_out === 'Yes' && sub.payout !== 'Paid' && sub.status !== 'Disqualified')
+    ? '<div style="background:rgba(159,232,34,0.06);border:1px solid rgba(159,232,34,0.28);border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
+        '<div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#9fe822;margin-bottom:10px;">🧾 Before you pay — 10-second gut-check</div>' +
+        _ck('Shouts out <strong style="color:#fff;">Toolforge</strong> + the <strong style="color:#fff;">2026 Trades Creator Report</strong> (with a real stat)') +
+        _ck('Followed the brief — tags, hashtags &amp; links are there') +
+        _ck('One entry, one platform — no sneaky doubles') +
+        _ck('Views look <strong style="color:#fff;">real</strong> — no boosting, bots, or bought hype') +
+        _ck('Video\'s a tidy <strong style="color:#fff;">~15–30s</strong>') +
+        '<div style="font-size:11px;color:#64748b;margin-top:4px;">All ticked? Send that creator their cash. 💸</div>' +
+      '</div>'
+    : '';
+
+  body.innerHTML =
+    // Hero row: alias + status
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">' +
+      '<div>' +
+        '<div style="font-size:24px;font-weight:900;color:#fbbf24;letter-spacing:2px;text-transform:uppercase;">' + esc(sub.alias||'—') + '</div>' +
+        '<div style="font-size:13px;color:#94a3b8;margin-top:3px;">' + esc(sub.name||'—') + '</div>' +
+      '</div>' +
+      statusPill +
+    '</div>' +
+
+    // Info grid
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">' +
+      _pmRow('Player Code', '<span style="font-family:\'Courier New\',monospace;color:#9fe822;letter-spacing:2px;font-size:14px;">' + esc(sub.plus_code||'—') + '</span>') +
+      _pmRow('Email', esc(sub.email||'—')) +
+      _pmRow('Platform', esc(sub.platform||'Unknown')) +
+      _pmRow('Views', viewsLabel) +
+      _pmRow('Qualified Tier', tierLabel) +
+      _pmRow('Bonus Bank', bonusLabel) +
+      _pmRow('Payout Status', esc(sub.payout||'—')) +
+      _pmRow('Submitted', esc((sub.sub_date||'—').substring(0,10))) +
+    '</div>' +
+
+    // Post / screenshot links
+    (sub.post_url ? '<div style="margin-bottom:12px;"><a href="'+esc(sub.post_url)+'" target="_blank" style="font-size:12px;color:#60a5fa;">🔗 View Original Post ↗</a></div>' : '') +
+    (ssLinks ? '<div style="margin-bottom:16px;">' + ssLinks + '</div>' : '') +
+
+    // Admin nudges — only for creators below the top tier (someone to still climb toward)
+    ((parseInt(effectiveViews||0) < 7000 && sub.status !== 'Disqualified')
+      ? ('<div style="margin-bottom:16px; display:flex; flex-direction:column; gap:8px;">'
+          + (((sub.cashed_out === 'Yes' || sub.status === 'Verified') && sub.payout !== 'Paid')
+              ? '<button class="jj-btn jj-btn-green" onclick="reopenAndNudge(' + sub._row + ')">↩ Reopen + send &quot;Keep Playing&quot; nudge</button>'
+              : '')
+          + '<button class="jj-btn jj-btn-muted" onclick="notifyKeepPlaying(' + sub._row + ')">✉ Send nudge only (don\'t reopen)</button>'
+          + '</div>')
+      : '') +
+
+    payoutChecklist +
+
+    // Notes (if any)
+    (sub.notes ? '<div style="background:#060b16;border:1px solid #1e293b;border-radius:8px;padding:12px;font-size:12px;color:#64748b;line-height:1.6;">📝 ' + esc(sub.notes) + '</div>' : '');
+
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePlayerModal() {
+  document.getElementById('playerModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+/* ── Init ───────────────────────────────────────────────────────── */
+loadTierRows();
+runFraudRadar();
+</script>
+{% endblock %}
