@@ -36,7 +36,27 @@ keys, and **no real emails or payments are ever sent**. It runs locally in your 
 
 ---
 
-## Quick start
+## Explore it online (hosted demo — no install)
+
+This repo is ready to deploy as a **free, always-online demo** anyone can click into. GitHub Pages
+can't host it (it's a Python/Flask server, not static files), so it deploys to a Python host.
+
+**One-click deploy to Render (recommended, free):**
+1. Go to **[dashboard.render.com](https://dashboard.render.com)** → **New +** → **Blueprint**.
+2. Connect this repository (**`jobsite-jackpot-demo`**). Render reads `render.yaml` automatically.
+3. Click **Apply**. In ~2–3 minutes you get a public URL like
+   `https://jobsite-jackpot-demo.onrender.com`.
+
+That URL is a fully interactive copy: live board, join, decision page, mini-game, and admin
+(`admin` / `jackpot-dev`). Fictional data resets on each restart, so the demo is always clean.
+
+> Free Render services sleep after ~15 minutes idle; the first visit after that takes ~30–60s to
+> wake, then it's instant. Other Python hosts (Railway, PythonAnywhere, Fly.io) work too — the app
+> is a standard `gunicorn app:app` WSGI service.
+
+---
+
+## Quick start (run locally)
 
 **Prerequisites:** Python **3.9 or newer** (the demo is tested on 3.9). No other services needed.
 

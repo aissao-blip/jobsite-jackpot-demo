@@ -35,8 +35,16 @@ def create_app():
 
 app = create_app()
 
-if __name__ == "__main__":
+# Seed on import so the app has data whether started via `python app.py` (local) OR a
+# WSGI server like gunicorn (hosted, e.g. Render). seed_if_empty() is idempotent — it
+# only seeds an empty board, so repeated imports/workers are safe.
+try:
     pb_db.init_db()
+    seed_if_empty()
+except Exception:
+    pass
+
+if __name__ == "__main__":
     n = seed_if_empty()
     port = int(os.environ.get("PORT", "5000"))
     print("\n" + "=" * 60)

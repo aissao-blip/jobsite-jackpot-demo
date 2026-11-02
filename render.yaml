@@ -1,0 +1,16 @@
+# One-click deploy to Render (free tier). In Render: New + → Blueprint → pick this repo → Apply.
+# The repo already contains everything; this just tells Render how to build & run it.
+services:
+  - type: web
+    name: jobsite-jackpot-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Demo admin password (this is a public demo; the game data resets on each restart).
+      - key: ADMIN_PASSWORD
+        value: "jackpot-dev"
