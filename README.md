@@ -1,5 +1,9 @@
 # 🎯 Jobsite Jackpot — Portfolio Demo
 
+**▶ Live production site: [jobsitejackpot.com](https://jobsitejackpot.com)** — the real deployed
+campaign. **This repository** is the standalone, run-it-yourself demo (fictional data, no secrets)
+that showcases the same product locally at `http://localhost:5000`.
+
 A standalone, fully interactive demonstration of **Jobsite Jackpot** — a real-money-style
 *creator cash competition* I designed and built to run a brand's creator-partnership campaign.
 Creators submit a social post, climb cash tiers as their views grow, and make a strategic
